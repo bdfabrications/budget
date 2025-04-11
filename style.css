@@ -159,6 +159,36 @@ button:hover, .button:hover {
 .delete-btn { background: #dc3545; } /* Red */
 .delete-btn:hover { background: #c82333; }
 
+/* Data Management Section Styles */
+.data-management {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 15px 20px;
+    margin-bottom: 25px;
+    text-align: center; /* Center buttons */
+}
+.data-management h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.4em;
+    color: #444;
+}
+.data-management button {
+    background-color: #6c757d; /* Grey */
+    margin: 5px; /* Space around buttons */
+}
+.data-management button:hover {
+    background-color: #5a6268;
+}
+.data-management .tip {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 15px;
+    margin-bottom: 0;
+}
+
+
 /* Reports Section Styling */
 .report-controls {
     margin-bottom: 20px;
@@ -287,3 +317,4 @@ button:hover, .button:hover {
 /* Reference Styles for Printable Report Page (Embedded in JS) */
 /* These styles are not directly used by index.html but defined here for completeness */
 /* .report-page-body, .report-page-h1, .report-page-meta, etc. */
+/* .transaction-log, .category-header, .category-total-row */

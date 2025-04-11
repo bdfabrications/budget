@@ -44,6 +44,19 @@
         </div>
 
         <div class="display-section">
+
+            <div class="data-management">
+                <h2>Data Management</h2>
+                <button type="button" id="save-data-btn" title="Saves all current transactions, categories, and budgets to a downloadable .json file.">
+                    Save Current Data (Backup)
+                </button>
+                <button type="button" id="load-data-btn" title="Loads data from a previously saved .json file. Warning: This will replace all current data in the app!">
+                    Load Saved Data
+                </button>
+                <input type="file" id="load-json-input" accept=".json" style="display: none;">
+                <p class="tip">Tip: Save your data regularly as a backup or to transfer between devices!</p>
+            </div>
+            <hr>
             <h2>Transactions</h2>
             <ul id="transaction-list">
                 </ul>

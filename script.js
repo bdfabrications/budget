@@ -5,18 +5,18 @@ document.addEventListener('DOMContentLoaded', () => {
         income: ['Salary', 'Freelance', 'Gift', 'Other Income'],
         expense: ['Groceries', 'Rent/Mortgage', 'Utilities', 'Transport', 'Entertainment', 'Dining Out', 'Other Expense']
     };
-    let currentView = 'view-transactions'; // Default view
+    let currentView = 'view-transactions';
     let editingTransactionId = null;
     let currentFilter = { text: '', type: 'all' };
     let expenseChart = null;
 
     // --- DOM Elements ---
     const views = document.querySelectorAll('.view');
-    const navButtons = document.querySelectorAll('header nav .nav-btn'); // Desktop nav buttons
+    const navButtons = document.querySelectorAll('header nav .nav-btn');
     const transactionList = document.getElementById('transaction-list');
     const noTransactionsMessage = document.getElementById('no-transactions-message');
-    const fab = document.getElementById('add-transaction-fab'); // Desktop Add button
-    const userGreetingEl = document.getElementById('user-greeting'); // Greeting element
+    const fab = document.getElementById('add-transaction-fab');
+    const userGreetingEl = document.getElementById('user-greeting');
 
     // Modals & Forms
     const transactionModal = document.getElementById('transaction-modal');
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveTransactionBtn = document.getElementById('save-transaction-btn');
 
     // Category Management Elements
-    const manageCategoriesNavBtn = document.getElementById('manage-categories-nav-btn'); // Desktop Categories btn
+    const manageCategoriesNavBtn = document.getElementById('manage-categories-nav-btn');
     const incomeCategoryList = document.getElementById('income-category-list');
     const expenseCategoryList = document.getElementById('expense-category-list');
     const newIncomeCategoryInput = document.getElementById('new-income-category');
@@ -45,12 +45,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reporting Elements
     const reportPeriodSelect = document.getElementById('report-period');
     const generateReportBtn = document.getElementById('generate-report-btn');
-    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const generatePrintReportBtn = document.getElementById('generate-print-report-btn'); // New button
     const totalIncomeEl = document.getElementById('total-income');
     const totalExpensesEl = document.getElementById('total-expenses');
     const netBalanceEl = document.getElementById('net-balance');
     const expenseChartCanvas = document.getElementById('expense-chart');
     const noExpenseDataMessage = document.getElementById('no-expense-data-message');
+    const customDateRangeDiv = document.getElementById('custom-date-range');
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
 
     // Filtering Elements
     const searchInput = document.getElementById('search-input');
@@ -64,11 +67,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadDataBtn = document.getElementById('load-data-btn');
     const loadFileInput = document.getElementById('load-file-input');
 
-    // Bottom Navigation Elements (Mobile)
+    // Bottom Navigation Elements
     const bottomNav = document.getElementById('bottom-nav');
     const bottomNavBtns = bottomNav.querySelectorAll('.bottom-nav-btn');
     const bottomNavAddBtn = document.getElementById('bottom-nav-add-btn');
     const bottomNavCategoriesBtn = document.getElementById('bottom-nav-categories-btn');
+
 
 
     // --- Utility Functions ---
@@ -84,14 +88,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hour < 18) return "Good afternoon";
         return "Good evening";
     };
-
-    // --- Simple Greeting Function ---
     const displayGreeting = () => {
         const timeGreeting = getTimeOfDayGreeting();
         userGreetingEl.textContent = `${timeGreeting}!`;
         userGreetingEl.style.opacity = 1;
     };
-
 
     // --- Local Storage ---
     const loadData = () => {
@@ -179,46 +180,150 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Reporting Logic ---
     const generateReport = () => {
-        const period = reportPeriodSelect.value; const today = new Date(); let startDate;
-        switch (period) { case 'weekly': const firstDay = today.getDate() - today.getDay(); startDate = new Date(new Date().setDate(firstDay)); break; case 'biweekly': startDate = new Date(new Date().getTime() - 13 * 24 * 60 * 60 * 1000); break; case 'monthly': startDate = new Date(today.getFullYear(), today.getMonth(), 1); break; case 'all': default: startDate = new Date(0); break; }
-        const endDate = new Date();
-        const filteredTransactions = transactions.filter(t => { const transactionDate = new Date(t.date); const startOfDay = new Date(startDate); startOfDay.setHours(0, 0, 0, 0); const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999); const transactionDayOnly = new Date(transactionDate.getFullYear(), transactionDate.getMonth(), transactionDate.getDate()); return transactionDayOnly >= startOfDay && transactionDayOnly <= endOfDay; });
-        let totalIncome = 0; let totalExpenses = 0; const expenseByCategory = {};
-        filteredTransactions.forEach(t => { if (t.type === 'income') { totalIncome += t.amount; } else { totalExpenses += t.amount; expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amount; } });
-        const netBalance = totalIncome - totalExpenses; totalIncomeEl.textContent = formatCurrency(totalIncome); totalExpensesEl.textContent = formatCurrency(totalExpenses); netBalanceEl.textContent = formatCurrency(netBalance); netBalanceEl.classList.toggle('text-income', netBalance >= 0); netBalanceEl.classList.toggle('text-expense', netBalance < 0);
-        updateExpenseChart(expenseByCategory);
-    };
-    const updateExpenseChart = (expenseData) => {
-        const labels = Object.keys(expenseData).sort((a,b) => expenseData[b] - expenseData[a]); const data = labels.map(label => expenseData[label]);
-        const generateColors = (count) => { const baseColors = ['#007bff', '#6c757d', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6610f2', '#fd7e14', '#20c997', '#e83e8c']; const alpha = 'aa'; return Array.from({ length: count }, (_, i) => baseColors[i % baseColors.length] + alpha); };
-        const chartColors = generateColors(labels.length);
-        const currentTheme = document.body.dataset.theme || 'light'; // Get theme AFTER potential update
-        const borderColor = getComputedStyle(document.body).getPropertyValue('--card-bg-color').trim();
-        const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        const period = reportPeriodSelect.value;
+        const today = new Date();
+        let startDate;
+        let endDate;
+        let periodText = '';
 
-        if (expenseChart) { expenseChart.destroy(); expenseChart = null; } // Destroy previous chart if exists
+        if (period === 'custom') {
+            startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+            endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+             if (!startDate || !endDate || startDate > endDate) { // Added validation
+                alert('Please select a valid start and end date for the custom range.');
+                return;
+             }
+             periodText = `Custom Range: ${formatDate(startDateInput.value)} - ${formatDate(endDateInput.value)}`;
+
+        } else {
+            endDate = new Date(); // End of today
+            switch (period) {
+                case 'weekly':
+                    const firstDay = today.getDate() - today.getDay();
+                    startDate = new Date(new Date().setDate(firstDay));
+                    periodText = "This Week";
+                    break;
+                case 'biweekly':
+                    startDate = new Date(new Date().getTime() - 13 * 24 * 60 * 60 * 1000);
+                    periodText = "Last 14 Days";
+                    break;
+                case 'monthly':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    periodText = "This Month";
+                    break;
+                case 'all':
+                default:
+                    startDate = new Date(0);
+                    periodText = "All Time";
+                    break;
+            }
+        }
+
+        // Ensure consistent time handling for filtering
+        const startOfDayFilter = new Date(startDate);
+        startOfDayFilter.setHours(0,0,0,0);
+        const endOfDayFilter = new Date(endDate);
+        endOfDayFilter.setHours(23,59,59,999);
+
+
+        const filteredTransactions = transactions.filter(t => {
+            const transactionDate = new Date(t.date);
+            // Compare transaction date directly with start/end of day filters
+            return transactionDate >= startOfDayFilter && transactionDate <= endOfDayFilter;
+        });
+
+        let totalIncome = 0;
+        let totalExpenses = 0;
+        const expenseByCategory = {};
+        filteredTransactions.forEach(t => {
+            if (t.type === 'income') {
+                totalIncome += t.amount;
+            } else {
+                totalExpenses += t.amount;
+                expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amount;
+            }
+        });
+        const netBalance = totalIncome - totalExpenses;
+        totalIncomeEl.textContent = formatCurrency(totalIncome);
+        totalExpensesEl.textContent = formatCurrency(totalExpenses);
+        netBalanceEl.textContent = formatCurrency(netBalance);
+        netBalanceEl.classList.toggle('text-income', netBalance >= 0);
+        netBalanceEl.classList.toggle('text-expense', netBalance < 0);
+        updateExpenseChart(expenseByCategory);
+
+        // Show/hide custom date inputs
+        customDateRangeDiv.style.display = period === 'custom' ? 'flex' : 'none';
+    };
+
+    const updateExpenseChart = (expenseData) => {
+        const labels = Object.keys(expenseData).sort((a,b) => expenseData[b] - expenseData[a]);
+        const data = labels.map(label => expenseData[label]);
+        const generateColors = (count) => {
+            const baseColors = ['#007bff', '#6c757d', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6610f2', '#fd7e14', '#20c997', '#e83e8c'];
+            const alpha = 'aa';
+            return Array.from({ length: count }, (_, i) => baseColors[i % baseColors.length] + alpha);
+        };
+        const chartColors = generateColors(labels.length);
+        // Ensure theme is applied before getting colors
+        applyTheme();
+        const bodyStyle = getComputedStyle(document.body);
+        const borderColor = bodyStyle.getPropertyValue('--card-bg-color').trim() || '#ffffff';
+        const textColor = bodyStyle.getPropertyValue('--text-color').trim() || '#000000';
+
+        if (expenseChart) {
+            expenseChart.destroy();
+            expenseChart = null;
+        }
 
         if (labels.length > 0) {
             noExpenseDataMessage.style.display = 'none';
-            expenseChart = new Chart(expenseChartCanvas, { type: 'doughnut', data: { labels: labels, datasets: [{ label: 'Expenses by Category', data: data, backgroundColor: chartColors, borderColor: borderColor, borderWidth: 2, hoverOffset: 4 }] },
+            expenseChart = new Chart(expenseChartCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Expenses by Category',
+                        data: data,
+                        backgroundColor: chartColors,
+                        borderColor: borderColor,
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    layout: { padding: { bottom: 25 } }, // Keep layout padding
+                    layout: { padding: { bottom: 25 } },
                     animation: { animateScale: true, animateRotate: true },
                     plugins: {
                         legend: {
                             position: 'bottom',
                             labels: {
-                                color: textColor, // Use dynamically fetched color
+                                color: textColor,
                                 padding: 10,
                                 usePointStyle: true,
                                 font: {
-                                    size: 13 // Keep increased font size
+                                    size: 13
                                 }
                             }
                         },
-                        tooltip: { callbacks: { label: function(context) { let label = context.label || ''; if (label) label += ': '; if (context.parsed !== null) { label += '$' + formatCurrency(context.parsed); const total = context.dataset.data.reduce((acc, value) => acc + value, 0); if (total > 0) { const percentage = ((context.parsed / total) * 100).toFixed(1); label += ` (${percentage}%)`; } } return label; } } }
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed !== null) {
+                                        label += '$' + formatCurrency(context.parsed);
+                                        const total = context.dataset.data.reduce((acc, value) => acc + value, 0);
+                                        if (total > 0) {
+                                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                            label += ` (${percentage}%)`;
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
                     }
                 }
             });
@@ -227,32 +332,100 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- CSV Export ---
-    const exportToCSV = () => { const period = reportPeriodSelect.value; const today = new Date(); let startDate; switch (period) { case 'weekly': const firstDay = today.getDate() - today.getDay(); startDate = new Date(new Date().setDate(firstDay)); break; case 'biweekly': startDate = new Date(new Date().getTime() - 13 * 24 * 60 * 60 * 1000); break; case 'monthly': startDate = new Date(today.getFullYear(), today.getMonth(), 1); break; case 'all': default: startDate = new Date(0); break; } const endDate = new Date(); const transactionsToExport = transactions.filter(t => { const transactionDate = new Date(t.date); const startOfDay = new Date(startDate); startOfDay.setHours(0, 0, 0, 0); const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999); const transactionDayOnly = new Date(transactionDate.getFullYear(), transactionDate.getMonth(), transactionDate.getDate()); return transactionDayOnly >= startOfDay && transactionDayOnly <= endOfDay; }).sort((a, b) => new Date(a.date) - new Date(b.date)); if (transactionsToExport.length === 0) { alert('No transactions in the selected period to export.'); return; } const escapeCSV = (str) => { if (typeof str !== 'string') str = String(str); if (str.includes(',') || str.includes('"') || str.includes('\n')) { return `"${str.replace(/"/g, '""')}"`; } return str; }; const csvHeader = ['Date', 'Type', 'Description', 'Category', 'Amount']; const csvRows = transactionsToExport.map(t => [escapeCSV(t.date), escapeCSV(t.type), escapeCSV(t.description), escapeCSV(t.category), escapeCSV(t.amount)].join(',')); const csvString = [csvHeader.join(','), ...csvRows].join('\n'); const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', `transactions_${period}_${new Date().toISOString().slice(0,10)}.csv`); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); };
+    const generatePrintableReport = () => {
+        const period = reportPeriodSelect.value;
+         let startDateValue = '';
+         let endDateValue = '';
 
-    // --- Dark Mode (Destroy/Recreate Chart) ---
-     const setDarkMode = (isDark) => {
-         document.body.dataset.theme = isDark ? 'dark' : 'light';
-         localStorage.setItem('theme', isDark ? 'dark' : 'light');
-         themeToggle.checked = isDark;
-
-         // --- MODIFICATION START ---
-         // Destroy and regenerate chart to ensure options (like color) are applied fresh
-         if (expenseChart) {
-             expenseChart.destroy();
-             expenseChart = null;
-             // Regenerate report ONLY if the report view is currently active
-              if (currentView === 'view-report') {
-                  generateReport(); // This will call updateExpenseChart again
-              }
+          if (period === 'custom') {
+            startDateValue = startDateInput.value;
+            endDateValue = endDateInput.value;
+            if (!startDateValue || !endDateValue) {
+                alert('Please select both start and end dates for the custom range.');
+                return;
+            }
+            const startD = new Date(startDateValue);
+            const endD = new Date(endDateValue);
+             if (startD > endD) {
+                 alert('Start date cannot be after end date.');
+                 return;
+             }
          }
-         // --- MODIFICATION END ---
+
+        let url = 'report.html?period=' + encodeURIComponent(period);
+        if (startDateValue) {
+            url += '&startDate=' + encodeURIComponent(startDateValue);
+        }
+        if (endDateValue) {
+            url += '&endDate=' + encodeURIComponent(endDateValue);
+        }
+        window.open(url, '_blank');
+    };
+
+    // --- Dark Mode ---
+    const applyTheme = () => {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.body.dataset.theme = savedTheme;
+        themeToggle.checked = (savedTheme === 'dark');
+        // Update chart colors if chart exists
+        if (expenseChart && currentView === 'view-report') {
+            const bodyStyle = getComputedStyle(document.body);
+            const textColor = bodyStyle.getPropertyValue('--text-color').trim() || '#000000';
+            const borderColor = bodyStyle.getPropertyValue('--card-bg-color').trim() || '#ffffff';
+            if (expenseChart.options && expenseChart.options.plugins && expenseChart.options.plugins.legend) {
+                expenseChart.options.plugins.legend.labels.color = textColor;
+            }
+            if (expenseChart.data && expenseChart.data.datasets && expenseChart.data.datasets.length > 0) {
+                 expenseChart.data.datasets[0].borderColor = borderColor;
+            }
+            expenseChart.update();
+        }
+    }
+
+     const setDarkMode = (isDark) => {
+         localStorage.setItem('theme', isDark ? 'dark' : 'light');
+         applyTheme(); // Apply theme and update chart
      };
+
      const toggleDarkMode = () => { setDarkMode(themeToggle.checked); };
 
     // --- JSON Save/Load Functions ---
-    const saveDataToJSONFile = () => { try { const dataToSave = { transactions: transactions, categories: categories, savedAt: new Date().toISOString() }; const jsonString = JSON.stringify(dataToSave, null, 2); const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' }); const link = document.createElement('a'); const url = URL.createObjectURL(blob); link.setAttribute('href', url); const timestamp = new Date().toISOString().slice(0, 10); link.setAttribute('download', `income_expense_tracker_data_${timestamp}.json`); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); } catch (error) { console.error("Error saving data to JSON:", error); alert('Error saving data.'); } };
-    const handleLoadDataFromFile = (event) => { const file = event.target.files[0]; if (!file) return; if (!file.name.endsWith('.json')) { alert('Invalid file type. Please select a .json file.'); loadFileInput.value = ''; return; } const reader = new FileReader(); reader.onload = (e) => { try { const loadedData = JSON.parse(e.target.result); if (typeof loadedData !== 'object' || loadedData === null || !Array.isArray(loadedData.transactions) || typeof loadedData.categories !== 'object' || loadedData.categories === null || !Array.isArray(loadedData.categories.income) || !Array.isArray(loadedData.categories.expense)) { throw new Error("Invalid JSON structure."); } if (!confirm('Load data? This will REPLACE all current transactions and categories.')) { loadFileInput.value = ''; return; } transactions = loadedData.transactions; categories = { income: Array.isArray(loadedData.categories.income) ? loadedData.categories.income.sort((a,b) => a.localeCompare(b)) : [], expense: Array.isArray(loadedData.categories.expense) ? loadedData.categories.expense.sort((a,b) => a.localeCompare(b)) : [] }; saveData(); renderTransactionList(); if (currentView === 'view-report') generateReport(); populateCategoryOptions(); alert('Data loaded successfully!'); } catch (error) { console.error("Error loading data from JSON:", error); alert(`Error loading file: ${error.message}`); } finally { loadFileInput.value = ''; } }; reader.onerror = (e) => { console.error("FileReader error:", e); alert('Error reading file.'); loadFileInput.value = ''; }; reader.readAsText(file); };
+    const saveDataToJSONFile = () => {
+        try {
+            const dataToSave = { transactions: transactions, categories: categories, savedAt: new Date().toISOString() };
+            const jsonString = JSON.stringify(dataToSave, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            const timestamp = new Date().toISOString().slice(0, 10);
+            link.setAttribute('download', `income_expense_tracker_data_${timestamp}.json`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) { console.error("Error saving data to JSON:", error); alert('Error saving data.'); }
+    };
+    const handleLoadDataFromFile = (event) => {
+        const file = event.target.files[0]; if (!file) return;
+        if (!file.name.endsWith('.json')) { alert('Invalid file type. Please select a .json file.'); loadFileInput.value = ''; return; }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const loadedData = JSON.parse(e.target.result);
+                if (typeof loadedData !== 'object' || loadedData === null || !Array.isArray(loadedData.transactions) || typeof loadedData.categories !== 'object' || loadedData.categories === null || !Array.isArray(loadedData.categories.income) || !Array.isArray(loadedData.categories.expense)) { throw new Error("Invalid JSON structure."); }
+                if (!confirm('Load data? This will REPLACE all current transactions and categories.')) { loadFileInput.value = ''; return; }
+                transactions = loadedData.transactions;
+                categories = {
+                    income: Array.isArray(loadedData.categories.income) ? loadedData.categories.income.sort((a,b) => a.localeCompare(b)) : [],
+                    expense: Array.isArray(loadedData.categories.expense) ? loadedData.categories.expense.sort((a,b) => a.localeCompare(b)) : []
+                };
+                saveData(); renderTransactionList(); if (currentView === 'view-report') generateReport(); populateCategoryOptions(); alert('Data loaded successfully!');
+            } catch (error) { console.error("Error loading data from JSON:", error); alert(`Error loading file: ${error.message}`); }
+            finally { loadFileInput.value = ''; }
+        };
+        reader.onerror = (e) => { console.error("FileReader error:", e); alert('Error reading file.'); loadFileInput.value = ''; };
+        reader.readAsText(file);
+    };
 
     // --- Event Listeners ---
     navButtons.forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
@@ -272,8 +445,15 @@ document.addEventListener('DOMContentLoaded', () => {
     addIncomeCategoryBtn.addEventListener('click', () => addCategory('income'));
     addExpenseCategoryBtn.addEventListener('click', () => addCategory('expense'));
     generateReportBtn.addEventListener('click', generateReport);
-    exportCsvBtn.addEventListener('click', exportToCSV);
-    reportPeriodSelect.addEventListener('change', generateReport);
+    generatePrintReportBtn.addEventListener('click', generatePrintableReport); // New button listener
+    reportPeriodSelect.addEventListener('change', () => {
+        // Only call generateReport if not selecting 'custom' initially
+        // Let the button handle generation for custom after dates are set
+        if (reportPeriodSelect.value !== 'custom') {
+            generateReport();
+        }
+        customDateRangeDiv.style.display = reportPeriodSelect.value === 'custom' ? 'flex' : 'none';
+    });
     themeToggle.addEventListener('change', toggleDarkMode);
     saveDataBtn.addEventListener('click', saveDataToJSONFile);
     loadDataBtn.addEventListener('click', () => loadFileInput.click());
@@ -282,12 +462,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initialization ---
     const initializeApp = () => {
         loadData();
-        const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setDarkMode(savedTheme ? savedTheme === 'dark' : prefersDark);
-        displayGreeting(); // Display the simple greeting
-        showView(currentView);
-        renderTransactionList();
+        applyTheme(); // Apply theme initially
+        displayGreeting();
+        showView(currentView); // Show initial view ('view-transactions')
+        // renderTransactionList(); // Called within showView if it's the active one
     };
 
     initializeApp();

@@ -3,66 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Income/Expense Tracker</title>
+    <title>Modern Income/Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h1>Income/Expense Tracker</h1>
+    <header>
+        <div class="header-container">
+            <h1><i class="fas fa-wallet"></i> Tracker</h1>
+            <nav> <button class="nav-btn active" data-view="view-transactions"><i class="fas fa-list-ul"></i> Transactions</button>
+                <button class="nav-btn" data-view="view-report"><i class="fas fa-chart-pie"></i> Report</button>
+                <button id="manage-categories-nav-btn"><i class="fas fa-tags"></i> Categories</button> </nav>
+            <div class="header-actions">
+                 <button id="save-data-btn" class="btn-secondary" title="Save data to JSON file"><i class="fas fa-save"></i> Save</button>
+                 <button id="load-data-btn" class="btn-secondary" title="Load data from JSON file"><i class="fas fa-folder-open"></i> Load</button>
+                 <input type="file" id="load-file-input" accept=".json" style="display: none;"> </div>
+            <div class="theme-switcher">
+                 <label class="switch">
+                    <input type="checkbox" id="theme-toggle-checkbox">
+                    <span class="slider round"></span>
+                </label>
+                <i class="fas fa-moon theme-icon moon-icon"></i>
+                <i class="fas fa-sun theme-icon sun-icon"></i>
+            </div>
+        </div>
+    </header>
 
-    <div class="container">
-        <div class="input-section">
-            <h2>Add New Transaction</h2>
-            <form id="transaction-form">
-                <label for="type">Type:</label>
-                <select id="type" required>
-                    <option value="income">Income</option>
-                    <option value="expense" selected>Expense</option>
-                </select>
+    <main>
+        <div id="view-transactions" class="view active">
+            <div id="user-greeting" class="greeting-bar">Loading greeting...</div>
 
-                <label for="date">Date:</label>
-                <input type="date" id="date" required>
-
-                <label for="description">Description:</label>
-                <input type="text" id="description" placeholder="e.g., Groceries, Salary" required>
-
-                <label for="amount">Amount:</label>
-                <input type="number" id="amount" step="0.01" min="0.01" placeholder="0.00" required>
-
-                <label for="category">Category:</label>
-                <select id="category" required>
-                    </select>
-                 <button type="button" id="manage-categories-btn">Manage Categories</button>
-
-                <button type="submit">Add Transaction</button>
-            </form>
-             <hr>
-             <h2>Budget Goals (%)</h2>
-             <div id="budget-section">
-                 </div>
-             <button type="button" id="save-budgets-btn">Save Budgets</button>
+            <div class="filter-search-bar">
+                 <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Search by description or category...">
+                 <select id="filter-type">
+                     <option value="all">All Types</option>
+                     <option value="income">Income Only</option>
+                     <option value="expense">Expenses Only</option>
+                 </select>
+            </div>
+            <div id="transaction-list-container">
+                <p id="no-transactions-message" class="info-message">No transactions yet. Click the '+' button to add one!</p>
+                <ul id="transaction-list">
+                    </ul>
+            </div>
         </div>
 
-        <div class="display-section">
-
-            <div class="data-management">
-                <h2>Data Management</h2>
-                <button type="button" id="save-data-btn" title="Saves all current transactions, categories, and budgets to a downloadable .json file.">
-                    Save Current Data (Backup)
-                </button>
-                <button type="button" id="load-data-btn" title="Loads data from a previously saved .json file. Warning: This will replace all current data in the app!">
-                    Load Saved Data
-                </button>
-                <input type="file" id="load-json-input" accept=".json" style="display: none;">
-                <p class="tip">Tip: Save your data regularly as a backup or to transfer between devices!</p>
-            </div>
-            <hr>
-            <h2>Transactions</h2>
-            <ul id="transaction-list">
-                </ul>
-             <hr>
-             <h2>Reports</h2>
-              <div class="report-controls">
+        <div id="view-report" class="view">
+             <div class="report-controls">
                   <label for="report-period">Select Period:</label>
                   <select id="report-period">
                       <option value="weekly">This Week</option>
@@ -70,71 +61,101 @@
                       <option value="monthly">This Month</option>
                       <option value="all">All Time</option>
                   </select>
-                   <button type="button" id="generate-report-btn">Generate Report</button>
-                   <button type="button" id="view-summary-report-btn">View Printable Summary</button>
+                   <button type="button" id="generate-report-btn"><i class="fas fa-sync-alt"></i> Generate</button>
+                   <button type="button" id="export-csv-btn"><i class="fas fa-file-csv"></i> Export CSV</button>
               </div>
-
-             <div class="report-summary">
+             <div class="report-summary card">
                  <h3>Summary</h3>
                  <p>Total Income: <span id="total-income">0.00</span></p>
                  <p>Total Expenses: <span id="total-expenses">0.00</span></p>
                  <p>Net Balance: <span id="net-balance">0.00</span></p>
              </div>
-
-            <div class="chart-container">
+            <div class="chart-container card">
                 <h3>Expense Breakdown</h3>
                 <canvas id="expense-chart"></canvas>
+                <p id="no-expense-data-message" class="info-message" style="display: none;">No expense data for selected period.</p>
             </div>
+        </div>
+    </main>
+
+    <button id="add-transaction-fab" class="fab"><i class="fas fa-plus"></i></button>
+
+    <div id="transaction-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h2 id="modal-title">Add Transaction</h2>
+            <form id="transaction-form">
+                <input type="hidden" id="transaction-id"> <div class="form-group">
+                    <label for="type"><i class="fas fa-exchange-alt"></i> Type:</label>
+                    <select id="type" required>
+                        <option value="income">Income</option>
+                        <option value="expense" selected>Expense</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="date"><i class="fas fa-calendar-alt"></i> Date:</label>
+                    <input type="date" id="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="description"><i class="fas fa-pencil-alt"></i> Description:</label>
+                    <input type="text" id="description" placeholder="e.g., Groceries, Salary" required>
+                </div>
+                <div class="form-group">
+                    <label for="amount"><i class="fas fa-dollar-sign"></i> Amount:</label>
+                    <input type="number" id="amount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label for="category"><i class="fas fa-tag"></i> Category:</label>
+                    <select id="category" required>
+                        </select>
+                </div>
+                <button type="submit" id="save-transaction-btn" class="btn-primary">
+                    <i class="fas fa-check"></i> Save Transaction
+                </button>
+            </form>
         </div>
     </div>
 
     <div id="category-modal" class="modal">
         <div class="modal-content">
-            <span class="close-btn category-close">&times;</span>
-            <h2>Manage Categories</h2>
+            <button class="close-modal-btn">&times;</button>
+            <h2><i class="fas fa-tags"></i> Manage Categories</h2>
             <div id="category-manager">
                  <h4>Income Categories</h4>
                  <ul id="income-category-list"></ul>
-                 <input type="text" id="new-income-category" placeholder="New Income Category">
-                 <button type="button" id="add-income-category-btn">Add</button>
+                 <div class="add-category-form">
+                     <input type="text" id="new-income-category" placeholder="New Income Category">
+                     <button type="button" id="add-income-category-btn" class="btn-secondary"><i class="fas fa-plus"></i> Add</button>
+                 </div>
 
                  <h4>Expense Categories</h4>
                  <ul id="expense-category-list"></ul>
-                 <input type="text" id="new-expense-category" placeholder="New Expense Category">
-                 <button type="button" id="add-expense-category-btn">Add</button>
+                 <div class="add-category-form">
+                     <input type="text" id="new-expense-category" placeholder="New Expense Category">
+                     <button type="button" id="add-expense-category-btn" class="btn-secondary"><i class="fas fa-plus"></i> Add</button>
+                 </div>
             </div>
         </div>
     </div>
 
-    <div id="edit-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn edit-close">&times;</span>
-            <h2>Edit Transaction</h2>
-            <form id="edit-transaction-form">
-                <input type="hidden" id="edit-id"> <label for="edit-type">Type:</label>
-                <select id="edit-type" required>
-                    <option value="income">Income</option>
-                    <option value="expense">Expense</option>
-                </select>
-
-                <label for="edit-date">Date:</label>
-                <input type="date" id="edit-date" required>
-
-                <label for="edit-description">Description:</label>
-                <input type="text" id="edit-description" required>
-
-                <label for="edit-amount">Amount:</label>
-                <input type="number" id="edit-amount" step="0.01" min="0.01" required>
-
-                <label for="edit-category">Category:</label>
-                <select id="edit-category" required>
-                    </select>
-
-                <button type="submit">Update Transaction</button>
-            </form>
-        </div>
+    <div id="bottom-nav">
+        <button class="bottom-nav-btn active" data-view="view-transactions">
+            <i class="fas fa-list-ul"></i>
+            <span>Transactions</span>
+        </button>
+        <button class="bottom-nav-btn" data-view="view-report">
+            <i class="fas fa-chart-pie"></i>
+            <span>Report</span>
+        </button>
+        <button class="bottom-nav-btn" id="bottom-nav-add-btn">
+            <i class="fas fa-plus-circle"></i>
+            <span>Add</span>
+        </button>
+        <button class="bottom-nav-btn" id="bottom-nav-categories-btn">
+            <i class="fas fa-tags"></i>
+            <span>Categories</span>
+        </button>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>

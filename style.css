@@ -1,472 +1,764 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // --- State Variables ---
-    let transactions = [];
-    let categories = {
-        income: ['Salary', 'Freelance', 'Gift', 'Other Income'],
-        expense: ['Groceries', 'Rent/Mortgage', 'Utilities', 'Transport', 'Entertainment', 'Dining Out', 'Other Expense']
-    };
-    let currentView = 'view-transactions';
-    let editingTransactionId = null;
-    let currentFilter = { text: '', type: 'all' };
-    let expenseChart = null;
+/* Base style.css - As of ~4:00 PM CDT 2025-04-11 */
 
-    // --- DOM Elements ---
-    const views = document.querySelectorAll('.view');
-    const navButtons = document.querySelectorAll('header nav .nav-btn');
-    const transactionList = document.getElementById('transaction-list');
-    const noTransactionsMessage = document.getElementById('no-transactions-message');
-    const fab = document.getElementById('add-transaction-fab');
-    const userGreetingEl = document.getElementById('user-greeting');
+/* --- Global Styles & Variables --- */
+:root {
+    --primary-color: #007bff; /* Blue */
+    --secondary-color: #6c757d; /* Gray */
+    --success-color: #28a745; /* Green */
+    --danger-color: #dc3545; /* Red */
+    --warning-color: #ffc107; /* Yellow */
+    --info-color: #17a2b8; /* Teal */
 
-    // Modals & Forms
-    const transactionModal = document.getElementById('transaction-modal');
-    const categoryModal = document.getElementById('category-modal');
-    const transactionForm = document.getElementById('transaction-form');
-    const categoryManager = document.getElementById('category-manager');
-    const closeModalBtns = document.querySelectorAll('.close-modal-btn');
-    const modalTitle = document.getElementById('modal-title');
-    const hiddenTransactionId = document.getElementById('transaction-id');
-    const typeSelect = document.getElementById('type');
-    const dateInput = document.getElementById('date');
-    const descriptionInput = document.getElementById('description');
-    const amountInput = document.getElementById('amount');
-    const categorySelect = document.getElementById('category');
-    const saveTransactionBtn = document.getElementById('save-transaction-btn');
+    --light-bg: #f8f9fa;
+    --light-card-bg: #ffffff;
+    --light-text: #212529;
+    --light-text-muted: #6c757d;
+    --light-border: #dee2e6;
+    --light-shadow: 0 2px 4px rgba(0, 0, 0, 0.075);
 
-    // Category Management Elements
-    const manageCategoriesNavBtn = document.getElementById('manage-categories-nav-btn');
-    const incomeCategoryList = document.getElementById('income-category-list');
-    const expenseCategoryList = document.getElementById('expense-category-list');
-    const newIncomeCategoryInput = document.getElementById('new-income-category');
-    const newExpenseCategoryInput = document.getElementById('new-expense-category');
-    const addIncomeCategoryBtn = document.getElementById('add-income-category-btn');
-    const addExpenseCategoryBtn = document.getElementById('add-expense-category-btn');
+    --dark-bg: #212529;
+    --dark-card-bg: #343a40;
+    --dark-text: #f8f9fa;
+    --dark-text-muted: #adb5bd;
+    --dark-border: #495057;
+    --dark-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 
-    // Reporting Elements
-    const reportPeriodSelect = document.getElementById('report-period');
-    const generateReportBtn = document.getElementById('generate-report-btn');
-    const generatePrintReportBtn = document.getElementById('generate-print-report-btn'); // New button
-    const totalIncomeEl = document.getElementById('total-income');
-    const totalExpensesEl = document.getElementById('total-expenses');
-    const netBalanceEl = document.getElementById('net-balance');
-    const expenseChartCanvas = document.getElementById('expense-chart');
-    const noExpenseDataMessage = document.getElementById('no-expense-data-message');
-    const customDateRangeDiv = document.getElementById('custom-date-range');
-    const startDateInput = document.getElementById('start-date');
-    const endDateInput = document.getElementById('end-date');
+    --font-family: 'Lato', sans-serif;
+    --border-radius: 0.375rem; /* 6px */
+    --transition-speed: 0.2s;
+}
 
-    // Filtering Elements
-    const searchInput = document.getElementById('search-input');
-    const filterTypeSelect = document.getElementById('filter-type');
+[data-theme="dark"] {
+    --bg-color: var(--dark-bg);
+    --card-bg-color: var(--dark-card-bg);
+    --text-color: var(--dark-text);
+    --text-muted-color: var(--dark-text-muted);
+    --border-color: var(--dark-border);
+    --shadow-color: var(--dark-shadow);
+}
 
-    // Theme Toggle Elements
-    const themeToggle = document.getElementById('theme-toggle-checkbox');
+[data-theme="light"] {
+    --bg-color: var(--light-bg);
+    --card-bg-color: var(--light-card-bg);
+    --text-color: var(--light-text);
+    --text-muted-color: var(--light-text-muted);
+    --border-color: var(--light-border);
+    --shadow-color: var(--light-shadow);
+}
 
-    // Save/Load Elements
-    const saveDataBtn = document.getElementById('save-data-btn');
-    const loadDataBtn = document.getElementById('load-data-btn');
-    const loadFileInput = document.getElementById('load-file-input');
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
-    // Bottom Navigation Elements
-    const bottomNav = document.getElementById('bottom-nav');
-    const bottomNavBtns = bottomNav.querySelectorAll('.bottom-nav-btn');
-    const bottomNavAddBtn = document.getElementById('bottom-nav-add-btn');
-    const bottomNavCategoriesBtn = document.getElementById('bottom-nav-categories-btn');
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
+}
 
+h1, h2, h3, h4 {
+    color: var(--text-color);
+    margin-bottom: 0.75rem;
+    line-height: 1.3;
+}
+h1 { font-size: 1.8rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
 
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
 
-    // --- Utility Functions ---
-    const formatCurrency = (amount) => {
-        return parseFloat(amount).toFixed(2);
-    };
-    const formatDate = (dateString) => {
-        return dateString ? dateString.split('T')[0] : '';
-    };
-    const getTimeOfDayGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return "Good morning";
-        if (hour < 18) return "Good afternoon";
-        return "Good evening";
-    };
-    const displayGreeting = () => {
-        const timeGreeting = getTimeOfDayGreeting();
-        userGreetingEl.textContent = `${timeGreeting}!`;
-        userGreetingEl.style.opacity = 1;
-    };
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem;
+    transition: background-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
 
-    // --- Local Storage ---
-    const loadData = () => {
-        transactions = JSON.parse(localStorage.getItem('transactions_v2')) || [];
-        const storedCategories = JSON.parse(localStorage.getItem('categories_v2'));
-        if (storedCategories) {
-            categories.income = [...new Set([...categories.income, ...storedCategories.income])];
-            categories.expense = [...new Set([...categories.expense, ...storedCategories.expense])];
-        }
-        categories.income.sort((a, b) => a.localeCompare(b));
-        categories.expense.sort((a, b) => a.localeCompare(b));
-    };
-    const saveData = () => {
-        localStorage.setItem('transactions_v2', JSON.stringify(transactions));
-        localStorage.setItem('categories_v2', JSON.stringify(categories));
-    };
+input, select {
+    font-family: inherit;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
+    /*width: 100%; */ /* Remove fixed width for inline elements */
+    transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease;
+}
+input[type="text"], select { /* Ensure text inputs and selects still take width */
+     width: 100%;
+}
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
 
-    // --- View Management ---
-    const showView = (viewId) => {
-        currentView = viewId;
-        views.forEach(view => { view.classList.toggle('active', view.id === viewId); });
-        navButtons.forEach(btn => { btn.classList.toggle('active', btn.dataset.view === viewId); });
-        bottomNavBtns.forEach(btn => { if (btn.dataset.view) btn.classList.toggle('active', btn.dataset.view === viewId); });
-        if (viewId === 'view-report') generateReport();
-        if (viewId === 'view-transactions') renderTransactionList();
-    };
+i { /* Font Awesome icons */
+    margin-right: 0.5em;
+}
+button i { /* Remove margin if icon is the only content or last item */
+    margin-right: 0.25em;
+}
+button i.fa-plus, button i.fa-check, button i.fa-sync-alt, button i.fa-save, button i.fa-folder-open, button i.fa-print {
+    margin-right: 0.5em;
+}
 
-    // --- Modal Management ---
-    const openModal = (modalElement) => {
-        modalElement.classList.add('active');
-         const firstInput = modalElement.querySelector('input:not([type="hidden"]), select');
-         if(firstInput) setTimeout(() => firstInput.focus(), 50);
-    };
-    const closeModal = (modalElement) => { modalElement.classList.remove('active'); };
-    const openTransactionModal = (mode = 'add', transaction = null) => {
-        transactionForm.reset(); editingTransactionId = null; hiddenTransactionId.value = '';
-        if (mode === 'add') {
-            modalTitle.textContent = 'Add Transaction'; saveTransactionBtn.innerHTML = '<i class="fas fa-plus"></i> Add Transaction';
-            dateInput.valueAsDate = new Date(); typeSelect.value = 'expense'; populateCategoryOptions();
-        } else if (mode === 'edit' && transaction) {
-            modalTitle.textContent = 'Edit Transaction'; saveTransactionBtn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
-            editingTransactionId = transaction.id; hiddenTransactionId.value = transaction.id; typeSelect.value = transaction.type;
-            dateInput.value = transaction.date; descriptionInput.value = transaction.description; amountInput.value = transaction.amount;
-            populateCategoryOptions(); categorySelect.value = transaction.category;
-        } else { console.error("Invalid mode or missing transaction for edit."); return; }
-        openModal(transactionModal);
-    };
+/* --- Utility Classes --- */
+.card {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-color);
+    transition: background-color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
 
-    // --- Transaction Logic ---
-    const handleTransactionFormSubmit = (e) => {
-        e.preventDefault(); const type = typeSelect.value; const date = dateInput.value; const description = descriptionInput.value.trim(); const amount = parseFloat(amountInput.value); const category = categorySelect.value; const id = hiddenTransactionId.value ? parseInt(hiddenTransactionId.value) : Date.now();
-        if (!date || !description || isNaN(amount) || amount <= 0 || !category) { alert('Please fill in all fields with valid data.'); return; }
-        const transactionData = { id, type, date, description, amount, category };
-        if (editingTransactionId) { transactions = transactions.map(t => t.id === editingTransactionId ? transactionData : t); }
-        else { transactions.push(transactionData); }
-        saveData(); renderTransactionList(); closeModal(transactionModal); if (currentView === 'view-report') generateReport();
-    };
-    const deleteTransaction = (id) => {
-        if (confirm('Are you sure you want to delete this transaction?')) {
-            transactions = transactions.filter(t => t.id !== id); saveData(); renderTransactionList(); if (currentView === 'view-report') generateReport();
-        }
-    };
+.text-income { color: var(--success-color); }
+.text-expense { color: var(--danger-color); }
+.text-muted { color: var(--text-muted-color); }
 
-    // --- Rendering Functions ---
-    const renderTransactionList = () => {
-        transactionList.innerHTML = ''; const searchTerm = currentFilter.text.toLowerCase(); const filterType = currentFilter.type;
-        const filteredTransactions = transactions.filter(t => { const descriptionMatch = t.description.toLowerCase().includes(searchTerm); const categoryMatch = t.category.toLowerCase().includes(searchTerm); const typeMatch = filterType === 'all' || t.type === filterType; return (descriptionMatch || categoryMatch) && typeMatch; }).sort((a, b) => new Date(b.date) - new Date(a.date));
-        if (filteredTransactions.length === 0 && transactions.length > 0) { transactionList.innerHTML = '<li class="info-message">No transactions match your filter.</li>'; noTransactionsMessage.style.display = 'none'; }
-        else if (transactions.length === 0) { noTransactionsMessage.style.display = 'block'; }
-        else { noTransactionsMessage.style.display = 'none'; filteredTransactions.forEach(t => { const li = document.createElement('li'); li.classList.add('transaction-card'); li.dataset.id = t.id; li.innerHTML = ` <div class="transaction-details"> <span class="transaction-description">${t.description}</span> <span class="transaction-category"><i class="fas fa-tag"></i> ${t.category}</span> <span class="transaction-date"><i class="fas fa-calendar-alt"></i> ${formatDate(t.date)}</span> </div> <div class="transaction-amount ${t.type === 'income' ? 'text-income' : 'text-expense'}"> ${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)} </div> <div class="transaction-actions"> <button class="btn-icon btn-warning edit-btn" title="Edit"><i class="fas fa-edit"></i></button> <button class="btn-icon btn-danger delete-btn" title="Delete"><i class="fas fa-trash-alt"></i></button> </div> `; transactionList.appendChild(li); }); }
-    };
+.btn-primary { background-color: var(--primary-color); color: white; }
+.btn-primary:hover { background-color: #0056b3; }
+.btn-secondary { background-color: var(--secondary-color); color: white; }
+.btn-secondary:hover { background-color: #5a6268; }
+.btn-danger { background-color: var(--danger-color); color: white; padding: 0.3rem 0.6rem; font-size: 0.85rem; }
+.btn-danger:hover { background-color: #c82333; }
+.btn-warning { background-color: var(--warning-color); color: #212529; padding: 0.3rem 0.6rem; font-size: 0.85rem; }
+.btn-warning:hover { background-color: #e0a800; }
+.btn-icon { background: none; border: none; padding: 0.3rem; color: var(--text-muted-color); }
+.btn-icon:hover { color: var(--primary-color); }
 
-    // --- Filtering Logic ---
-    const handleFilterChange = () => { currentFilter.text = searchInput.value; currentFilter.type = filterTypeSelect.value; renderTransactionList(); };
+.info-message {
+    text-align: center;
+    color: var(--text-muted-color);
+    padding: 2rem 1rem;
+    font-style: italic;
+}
 
-    // --- Editing Logic ---
-    const handleTransactionListClick = (e) => { const editButton = e.target.closest('.edit-btn'); const deleteButton = e.target.closest('.delete-btn'); if (editButton) { const card = editButton.closest('.transaction-card'); const id = parseInt(card.dataset.id); const transactionToEdit = transactions.find(t => t.id === id); if (transactionToEdit) openTransactionModal('edit', transactionToEdit); } else if (deleteButton) { const card = deleteButton.closest('.transaction-card'); const id = parseInt(card.dataset.id); deleteTransaction(id); } };
-
-    // --- Category Management ---
-    const populateCategoryOptions = () => { const currentType = typeSelect.value; categorySelect.innerHTML = ''; if (categories[currentType]) { categories[currentType].forEach(cat => { const option = document.createElement('option'); option.value = cat; option.textContent = cat; categorySelect.appendChild(option); }); } };
-    const renderCategoryList = (type) => { const listElement = type === 'income' ? incomeCategoryList : expenseCategoryList; listElement.innerHTML = ''; categories[type].forEach(cat => { const li = document.createElement('li'); li.textContent = cat; const deleteBtn = document.createElement('button'); deleteBtn.classList.add('btn-icon', 'btn-danger', 'delete-category-btn'); deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>'; deleteBtn.title = `Delete ${cat}`; deleteBtn.onclick = () => deleteCategory(type, cat); li.appendChild(deleteBtn); listElement.appendChild(li); }); };
-    const addCategory = (type) => { const inputElement = type === 'income' ? newIncomeCategoryInput : newExpenseCategoryInput; const categoryName = inputElement.value.trim(); if (categoryName && !categories[type].includes(categoryName)) { categories[type].push(categoryName); categories[type].sort((a,b) => a.localeCompare(b)); saveData(); renderCategoryList(type); populateCategoryOptions(); inputElement.value = ''; } else if (!categoryName) { alert('Category name cannot be empty.'); } else { alert(`Category "${categoryName}" already exists.`); } };
-    const deleteCategory = (type, categoryName) => { const isUsed = transactions.some(t => t.type === type && t.category === categoryName); if (isUsed) { alert(`Cannot delete category "${categoryName}" as it is used by existing transactions.`); return; } if (categories[type].length <= 1) { alert(`Cannot delete the last category for ${type}.`); return; } categories[type] = categories[type].filter(cat => cat !== categoryName); saveData(); renderCategoryList(type); populateCategoryOptions(); };
-    const showCategoryModal = () => { renderCategoryList('income'); renderCategoryList('expense'); openModal(categoryModal); };
-
-    // --- Reporting Logic ---
-    const generateReport = () => {
-        const period = reportPeriodSelect.value;
-        const today = new Date();
-        let startDate;
-        let endDate;
-        let periodText = '';
-
-        if (period === 'custom') {
-            startDate = startDateInput.value ? new Date(startDateInput.value) : null;
-            endDate = endDateInput.value ? new Date(endDateInput.value) : null;
-             if (!startDate || !endDate || startDate > endDate) { // Added validation
-                alert('Please select a valid start and end date for the custom range.');
-                return;
-             }
-             periodText = `Custom Range: ${formatDate(startDateInput.value)} - ${formatDate(endDateInput.value)}`;
-
-        } else {
-            endDate = new Date(); // End of today
-            switch (period) {
-                case 'weekly':
-                    const firstDay = today.getDate() - today.getDay();
-                    startDate = new Date(new Date().setDate(firstDay));
-                    periodText = "This Week";
-                    break;
-                case 'biweekly':
-                    startDate = new Date(new Date().getTime() - 13 * 24 * 60 * 60 * 1000);
-                    periodText = "Last 14 Days";
-                    break;
-                case 'monthly':
-                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                    periodText = "This Month";
-                    break;
-                case 'all':
-                default:
-                    startDate = new Date(0);
-                    periodText = "All Time";
-                    break;
-            }
-        }
-
-        // Ensure consistent time handling for filtering
-        const startOfDayFilter = new Date(startDate);
-        startOfDayFilter.setHours(0,0,0,0);
-        const endOfDayFilter = new Date(endDate);
-        endOfDayFilter.setHours(23,59,59,999);
+/* --- Header --- */
+header {
+    background-color: var(--card-bg-color);
+    padding: 0.75rem 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+.header-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrap on very small screens */
+}
+header h1 {
+    margin-bottom: 0;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    margin-right: 1rem; /* Space after title */
+}
+header nav { /* Desktop Nav */
+     flex-grow: 1; /* Allow nav to take space */
+     text-align: center; /* Center nav items roughly */
+}
+header nav button.nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted-color);
+    padding: 0.5rem 0.8rem;
+    margin: 0 0.2rem;
+    border-bottom: 2px solid transparent;
+    transition: color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+header nav button.nav-btn:hover {
+    color: var(--primary-color);
+}
+header nav button.nav-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: bold;
+}
+.header-actions { /* Save/Load buttons */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto; /* Push actions towards the right before theme switcher */
+    margin-right: 1rem;
+}
+.header-actions button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+}
+.header-actions button i {
+    margin-right: 0.4em;
+}
+#save-data-btn:hover, #load-data-btn:hover {
+     background-color: #5a6268;
+}
 
 
-        const filteredTransactions = transactions.filter(t => {
-            const transactionDate = new Date(t.date);
-            // Compare transaction date directly with start/end of day filters
-            return transactionDate >= startOfDayFilter && transactionDate <= endOfDayFilter;
-        });
+/* --- Theme Switcher --- */
+.theme-switcher { display: flex; align-items: center; flex-shrink: 0; /* Prevent shrinking */ }
+.theme-switcher .theme-icon { font-size: 1.1rem; margin: 0 0.5rem; color: var(--text-muted-color); }
+.switch { position: relative; display: inline-block; width: 44px; height: 24px; margin: 0 5px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--primary-color); }
+input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
+input:checked + .slider:before { transform: translateX(20px); }
 
-        let totalIncome = 0;
-        let totalExpenses = 0;
-        const expenseByCategory = {};
-        filteredTransactions.forEach(t => {
-            if (t.type === 'income') {
-                totalIncome += t.amount;
-            } else {
-                totalExpenses += t.amount;
-                expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amount;
-            }
-        });
-        const netBalance = totalIncome - totalExpenses;
-        totalIncomeEl.textContent = formatCurrency(totalIncome);
-        totalExpensesEl.textContent = formatCurrency(totalExpenses);
-        netBalanceEl.textContent = formatCurrency(netBalance);
-        netBalanceEl.classList.toggle('text-income', netBalance >= 0);
-        netBalanceEl.classList.toggle('text-expense', netBalance < 0);
-        updateExpenseChart(expenseByCategory);
+/* --- Main Content & Views --- */
+main {
+    max-width: 1200px;
+    margin: 1.5rem auto;
+    padding: 0 1rem;
+}
+.view {
+    display: none; /* Hidden by default, shown by JS */
+    animation: fadeIn 0.5s ease-in-out;
+}
+.view.active {
+    display: block;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        // Show/hide custom date inputs
-        customDateRangeDiv.style.display = period === 'custom' ? 'flex' : 'none';
-    };
+/* --- Greeting Bar --- */
+.greeting-bar {
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    background-color: var(--card-bg-color); /* Use card background */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    color: var(--text-muted-color);
+    text-align: center;
+    box-shadow: var(--shadow-color);
+    transition: background-color var(--transition-speed) ease, border-color var(--transition-speed) ease, color var(--transition-speed) ease, opacity 0.5s ease;
+    opacity: 0; /* Start hidden for fade-in effect */
+}
 
-    const updateExpenseChart = (expenseData) => {
-        const labels = Object.keys(expenseData).sort((a,b) => expenseData[b] - expenseData[a]);
-        const data = labels.map(label => expenseData[label]);
-        const generateColors = (count) => {
-            const baseColors = ['#007bff', '#6c757d', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6610f2', '#fd7e14', '#20c997', '#e83e8c'];
-            const alpha = 'aa';
-            return Array.from({ length: count }, (_, i) => baseColors[i % baseColors.length] + alpha);
-        };
-        const chartColors = generateColors(labels.length);
-        // Ensure theme is applied before getting colors
-        applyTheme();
-        const bodyStyle = getComputedStyle(document.body);
-        const borderColor = bodyStyle.getPropertyValue('--card-bg-color').trim() || '#ffffff';
-        const textColor = bodyStyle.getPropertyValue('--text-color').trim() || '#000000';
 
-        if (expenseChart) {
-            expenseChart.destroy();
-            expenseChart = null;
-        }
+/* --- Transaction List View --- */
+.filter-search-bar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    background-color: var(--card-bg-color);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-color);
+    flex-wrap: wrap; /* Allow wrap on small screens */
+    gap: 0.5rem; /* Add gap between items */
+}
+.filter-search-bar i { color: var(--text-muted-color); flex-shrink: 0; }
+.filter-search-bar input[type="text"] {
+    flex-grow: 1;
+    border: none;
+    background: none;
+    padding-left: 0.5rem;
+    min-width: 150px; /* Ensure it doesn't get too small */
+}
+.filter-search-bar input[type="text"]:focus { box-shadow: none; }
+.filter-search-bar select { width: auto; margin-left: 0.5rem; background: none; border: none; flex-shrink: 0;}
 
-        if (labels.length > 0) {
-            noExpenseDataMessage.style.display = 'none';
-            expenseChart = new Chart(expenseChartCanvas, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Expenses by Category',
-                        data: data,
-                        backgroundColor: chartColors,
-                        borderColor: borderColor,
-                        borderWidth: 2,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: { padding: { bottom: 25 } },
-                    animation: { animateScale: true, animateRotate: true },
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                color: textColor,
-                                padding: 10,
-                                usePointStyle: true,
-                                font: {
-                                    size: 13
-                                }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.label || '';
-                                    if (label) label += ': ';
-                                    if (context.parsed !== null) {
-                                        label += '$' + formatCurrency(context.parsed);
-                                        const total = context.dataset.data.reduce((acc, value) => acc + value, 0);
-                                        if (total > 0) {
-                                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                            label += ` (${percentage}%)`;
-                                        }
-                                    }
-                                    return label;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        } else {
-            noExpenseDataMessage.style.display = 'block';
-        }
-    };
+#transaction-list { list-style: none; padding: 0; }
+.transaction-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.75rem;
+    background-color: var(--card-bg-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-color);
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+    animation: slideIn 0.4s ease-out;
+    flex-wrap: wrap; /* Allow wrapping inside card */
+}
+.transaction-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.transaction-details { flex-grow: 1; margin-right: 1rem; min-width: 150px; /* Prevent collapsing */ }
+.transaction-description { font-weight: bold; display: block; font-size: 1rem; }
+.transaction-category, .transaction-date {
+    font-size: 0.85rem;
+    color: var(--text-muted-color);
+    display: block; /* Stack category/date */
+    margin-right: 0.5rem;
+    margin-top: 0.1rem;
+}
+.transaction-category i, .transaction-date i { margin-right: 0.3em; } /* Adjust icon margin */
+.transaction-amount { font-weight: bold; font-size: 1.1rem; white-space: nowrap; margin-left: auto; padding-left: 1rem; /* Ensure space */ flex-shrink: 0; }
+.transaction-actions {
+    display: flex; /* Align action buttons */
+    align-items: center;
+    margin-left: 1rem;
+    flex-basis: 100%; /* Force actions to new line on wrap */
+    margin-top: 0.5rem; /* Add space when wrapped */
+    justify-content: flex-end; /* Align actions to the right */
+}
+.transaction-actions button { margin-left: 0.5rem; }
+.transaction-actions button i { margin-right: 0; } /* Icons only in action buttons */
 
-    const generatePrintableReport = () => {
-        const period = reportPeriodSelect.value;
-         let startDateValue = '';
-         let endDateValue = '';
 
-          if (period === 'custom') {
-            startDateValue = startDateInput.value;
-            endDateValue = endDateInput.value;
-            if (!startDateValue || !endDateValue) {
-                alert('Please select both start and end dates for the custom range.');
-                return;
-            }
-            const startD = new Date(startDateValue);
-            const endD = new Date(endDateValue);
-             if (startD > endD) {
-                 alert('Start date cannot be after end date.');
-                 return;
-             }
-         }
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
 
-        let url = 'report.html?period=' + encodeURIComponent(period);
-        if (startDateValue) {
-            url += '&startDate=' + encodeURIComponent(startDateValue);
-        }
-        if (endDateValue) {
-            url += '&endDate=' + encodeURIComponent(endDateValue);
-        }
-        window.open(url, '_blank');
-    };
+/* --- Report View --- */
+.report-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem; /* Reduced gap */
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+.report-controls label { margin-bottom: 0; flex-shrink: 0; margin-right: 0.25rem;}
+.report-controls select,
+.report-controls input[type="date"] {
+    width: auto; /* Allow natural sizing */
+    min-width: 120px; /* Minimum size */
+    flex-grow: 1; /* Allow growth */
+    max-width: 160px; /* Prevent excessive width */
+}
+.report-controls button { flex-shrink: 0; margin-left: 0.5rem;}
+#custom-date-range label { margin-left: 0.5rem;} /* Space before date labels */
 
-    // --- Dark Mode ---
-    const applyTheme = () => {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.body.dataset.theme = savedTheme;
-        themeToggle.checked = (savedTheme === 'dark');
-        // Update chart colors if chart exists
-        if (expenseChart && currentView === 'view-report') {
-            const bodyStyle = getComputedStyle(document.body);
-            const textColor = bodyStyle.getPropertyValue('--text-color').trim() || '#000000';
-            const borderColor = bodyStyle.getPropertyValue('--card-bg-color').trim() || '#ffffff';
-            if (expenseChart.options && expenseChart.options.plugins && expenseChart.options.plugins.legend) {
-                expenseChart.options.plugins.legend.labels.color = textColor;
-            }
-            if (expenseChart.data && expenseChart.data.datasets && expenseChart.data.datasets.length > 0) {
-                 expenseChart.data.datasets[0].borderColor = borderColor;
-            }
-            expenseChart.update();
-        }
+.report-summary { margin-top: 1rem; margin-bottom: 1.5rem; } /* Ensure space above summary */
+.report-summary p { margin: 0.3rem 0; font-size: 1.1em; }
+.report-summary #net-balance.text-income { color: var(--success-color); }
+.report-summary #net-balance.text-expense { color: var(--danger-color); }
+
+.chart-container {
+    position: relative;
+    height: 350px;
+    padding: 1.5rem;
+    max-height: 550px;
+    min-height: 250px;
+    margin-top: 1rem; /* Space above chart */
+}
+.chart-container #no-expense-data-message {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Styles specific to report.html layout */
+.report-section { margin-bottom: 2rem; }
+.report-section h3 {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    table-layout: fixed; /* Helps with width control */
+}
+.report-table th, .report-table td {
+    padding: 0.8rem 0.6rem; /* Screen padding */
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    word-wrap: break-word; /* Allow wrapping */
+    vertical-align: top; /* Align content top */
+}
+.report-table th {
+    font-weight: bold;
+    background-color: rgba(0, 0, 0, 0.03); /* Subtle header */
+}
+[data-theme="dark"] .report-table th {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+.report-table td.amount { text-align: right; font-weight: 500; white-space: nowrap; }
+.report-table td.percentage { text-align: right; font-size: 0.85rem; color: var(--text-muted-color);}
+
+/* Screen Column Widths for Report Page Tables */
+#transaction-details-table .date-col { width: 12%; }
+#transaction-details-table .type-col { width: 10%; }
+#transaction-details-table .desc-col { width: 40%; }
+#transaction-details-table .cat-col { width: 20%; }
+#transaction-details-table .amount-col { width: 18%; text-align: right;}
+
+.category-breakdown th:first-child, /* Category Name */
+.category-breakdown td:first-child { width: 50%; }
+.category-breakdown .amount { width: 25%; }
+.category-breakdown .percentage { width: 25%; }
+
+/* --- Floating Action Button (FAB) --- */
+.fab {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1050;
+    transition: transform var(--transition-speed) ease, background-color var(--transition-speed) ease;
+}
+.fab:hover {
+    background-color: #0056b3;
+    transform: scale(1.05);
+}
+.fab i { margin: 0; } /* Center icon */
+
+/* --- Modals --- */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 1100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6); /* Darker overlay */
+    animation: fadeIn 0.3s ease-out;
+}
+.modal.active { display: flex; align-items: center; justify-content: center; }
+.modal-content {
+    background-color: var(--bg-color);
+    margin: auto;
+    padding: 2rem;
+    border: 1px solid var(--border-color);
+    width: 90%;
+    max-width: 500px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    position: relative;
+    animation: slideDown 0.4s ease-out;
+    transition: background-color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+@keyframes slideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+
+.close-modal-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 1rem;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--text-muted-color);
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+}
+.close-modal-btn:hover { color: var(--danger-color); }
+
+#transaction-modal .form-group { margin-bottom: 1rem; }
+#transaction-modal label { display: block; margin-bottom: 0.3rem; font-weight: bold; color: var(--text-muted-color); }
+#transaction-modal label i { color: var(--primary-color); } /* Icon color in forms */
+#transaction-modal button[type="submit"] { width: 100%; padding: 0.75rem; margin-top: 1rem; font-size: 1rem; }
+
+/* Category Modal Specifics */
+#category-manager h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3rem; }
+#category-manager ul { list-style: none; padding: 0; margin-bottom: 1rem; }
+#category-manager li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed var(--border-color);
+}
+#category-manager li button { margin-left: 1rem; }
+#category-manager li button i { margin-right: 0; } /* Icon only */
+.add-category-form { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+.add-category-form input { flex-grow: 1; }
+.add-category-form button i { margin-right: 0.3em; } /* Adjust icon margin */
+
+/* --- Bottom Navigation Bar --- */
+#bottom-nav {
+    display: none; /* Hidden on desktop by default */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--card-bg-color);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.08);
+    z-index: 1000; /* Ensure it's above content */
+    padding: 0.3rem 0; /* Adjust vertical padding */
+}
+
+#bottom-nav .bottom-nav-btn {
+    flex-grow: 1; /* Distribute space evenly */
+    background: none;
+    border: none;
+    color: var(--text-muted-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.5rem; /* Adjust padding */
+    font-size: 0.65rem; /* Smaller text */
+    text-align: center;
+    transition: color var(--transition-speed) ease;
+}
+
+#bottom-nav .bottom-nav-btn i {
+    font-size: 1.3rem; /* Icon size */
+    margin: 0 0 0.15rem 0; /* Reset margin, add space below icon */
+}
+
+#bottom-nav .bottom-nav-btn span {
+    display: block; /* Ensure span takes full width for centering */
+    line-height: 1.2;
+}
+
+#bottom-nav .bottom-nav-btn:hover {
+    color: var(--primary-color);
+}
+
+#bottom-nav .bottom-nav-btn.active {
+    color: var(--primary-color);
+    /* font-weight: bold; */ /* Optional: bold active state */
+}
+
+/* --- Responsiveness --- */
+@media (max-width: 768px) {
+    body {
+        margin: 0; /* Remove default body margin on mobile */
+    }
+    .header-container {
+         flex-wrap: nowrap; /* Prevent wrapping in header now */
+         justify-content: space-between;
+    }
+    header h1 { font-size: 1.3rem; margin-right: 0.5rem;}
+    header nav { display: none; } /* Hide desktop nav */
+    #manage-categories-nav-btn { display: none; } /* Hide header category btn */
+
+    .header-actions { /* Adjust save/load buttons for mobile */
+        margin-left: 0;
+        margin-right: 0.5rem;
+        gap: 0.3rem;
+    }
+     .header-actions button {
+          padding: 0.4rem; /* Make slightly more touch-friendly */
+          font-size: 0.8rem;
+     }
+      .header-actions button i {
+          margin-right: 0; /* Icon only */
+      }
+      .header-actions button span { /* Hide text label */
+           display: none;
+      }
+    .theme-switcher { margin-left: 0; } /* Reset margin */
+
+
+    main { margin-top: 1rem; padding: 0 0.75rem; padding-bottom: 70px; /* ADDED PADDING FOR BOTTOM NAV */}
+
+    .card { padding: 1rem; }
+
+    .filter-search-bar { padding: 0.75rem; }
+    .filter-search-bar input[type="text"] { min-width: 120px; } /* Adjust min width */
+
+    .transaction-card { padding: 0.75rem; }
+    .transaction-details { margin-bottom: 0.5rem; }
+    .transaction-actions { margin-left: 0; /* Remove left margin when wrapped */ }
+
+    .report-controls { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+    .report-controls select, .report-controls input[type="date"] { min-width: initial; max-width: none; }
+    #custom-date-range { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+    #custom-date-range label { margin-left: 0; }
+
+    .chart-container {
+         height: 300px;
+         padding: 1rem;
+         min-height: 200px;
+         max-height: 450px;
     }
 
-     const setDarkMode = (isDark) => {
-         localStorage.setItem('theme', isDark ? 'dark' : 'light');
-         applyTheme(); // Apply theme and update chart
-     };
+    .fab { display: none; } /* Hide FAB on mobile, use bottom nav Add */
 
-     const toggleDarkMode = () => { setDarkMode(themeToggle.checked); };
+    .modal-content { width: 95%; padding: 1.5rem; margin: 10% auto; /* Adjust margin */ }
+    h2 { font-size: 1.3rem; }
 
-    // --- JSON Save/Load Functions ---
-    const saveDataToJSONFile = () => {
-        try {
-            const dataToSave = { transactions: transactions, categories: categories, savedAt: new Date().toISOString() };
-            const jsonString = JSON.stringify(dataToSave, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            const timestamp = new Date().toISOString().slice(0, 10);
-            link.setAttribute('download', `income_expense_tracker_data_${timestamp}.json`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link); link.click(); document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } catch (error) { console.error("Error saving data to JSON:", error); alert('Error saving data.'); }
-    };
-    const handleLoadDataFromFile = (event) => {
-        const file = event.target.files[0]; if (!file) return;
-        if (!file.name.endsWith('.json')) { alert('Invalid file type. Please select a .json file.'); loadFileInput.value = ''; return; }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const loadedData = JSON.parse(e.target.result);
-                if (typeof loadedData !== 'object' || loadedData === null || !Array.isArray(loadedData.transactions) || typeof loadedData.categories !== 'object' || loadedData.categories === null || !Array.isArray(loadedData.categories.income) || !Array.isArray(loadedData.categories.expense)) { throw new Error("Invalid JSON structure."); }
-                if (!confirm('Load data? This will REPLACE all current transactions and categories.')) { loadFileInput.value = ''; return; }
-                transactions = loadedData.transactions;
-                categories = {
-                    income: Array.isArray(loadedData.categories.income) ? loadedData.categories.income.sort((a,b) => a.localeCompare(b)) : [],
-                    expense: Array.isArray(loadedData.categories.expense) ? loadedData.categories.expense.sort((a,b) => a.localeCompare(b)) : []
-                };
-                saveData(); renderTransactionList(); if (currentView === 'view-report') generateReport(); populateCategoryOptions(); alert('Data loaded successfully!');
-            } catch (error) { console.error("Error loading data from JSON:", error); alert(`Error loading file: ${error.message}`); }
-            finally { loadFileInput.value = ''; }
-        };
-        reader.onerror = (e) => { console.error("FileReader error:", e); alert('Error reading file.'); loadFileInput.value = ''; };
-        reader.readAsText(file);
-    };
+    #bottom-nav { display: flex; } /* Show bottom nav */
+}
 
-    // --- Event Listeners ---
-    navButtons.forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
-    bottomNavBtns.forEach(button => { if (button.dataset.view) button.addEventListener('click', () => showView(button.dataset.view)); });
-    bottomNavAddBtn.addEventListener('click', () => openTransactionModal('add'));
-    bottomNavCategoriesBtn.addEventListener('click', showCategoryModal);
-    fab.addEventListener('click', () => openTransactionModal('add'));
-    closeModalBtns.forEach(btn => { btn.addEventListener('click', () => { const modal = btn.closest('.modal'); if(modal) closeModal(modal); }); });
-    transactionModal.addEventListener('click', (e) => { if (e.target === transactionModal) closeModal(transactionModal); });
-    categoryModal.addEventListener('click', (e) => { if (e.target === categoryModal) closeModal(categoryModal); });
-    transactionForm.addEventListener('submit', handleTransactionFormSubmit);
-    typeSelect.addEventListener('change', populateCategoryOptions);
-    transactionList.addEventListener('click', handleTransactionListClick);
-    searchInput.addEventListener('input', handleFilterChange);
-    filterTypeSelect.addEventListener('change', handleFilterChange);
-    manageCategoriesNavBtn.addEventListener('click', showCategoryModal);
-    addIncomeCategoryBtn.addEventListener('click', () => addCategory('income'));
-    addExpenseCategoryBtn.addEventListener('click', () => addCategory('expense'));
-    generateReportBtn.addEventListener('click', generateReport);
-    generatePrintReportBtn.addEventListener('click', generatePrintableReport); // New button listener
-    reportPeriodSelect.addEventListener('change', () => {
-        // Only call generateReport if not selecting 'custom' initially
-        // Let the button handle generation for custom after dates are set
-        if (reportPeriodSelect.value !== 'custom') {
-            generateReport();
-        }
-        customDateRangeDiv.style.display = reportPeriodSelect.value === 'custom' ? 'flex' : 'none';
-    });
-    themeToggle.addEventListener('change', toggleDarkMode);
-    saveDataBtn.addEventListener('click', saveDataToJSONFile);
-    loadDataBtn.addEventListener('click', () => loadFileInput.click());
-    loadFileInput.addEventListener('change', handleLoadDataFromFile);
+@media (max-width: 480px) {
+     header h1 { font-size: 1.1rem; }
+     .header-actions button { padding: 0.3rem; }
+     .theme-switcher .theme-icon { font-size: 1rem; margin: 0 0.2rem;}
+     .switch { width: 40px; height: 22px; }
+     .slider:before { height: 16px; width: 16px; left: 3px; bottom: 3px;}
+     input:checked + .slider:before { transform: translateX(18px); }
 
-    // --- Initialization ---
-    const initializeApp = () => {
-        loadData();
-        applyTheme(); // Apply theme initially
-        displayGreeting();
-        showView(currentView); // Show initial view ('view-transactions')
-        // renderTransactionList(); // Called within showView if it's the active one
-    };
+     .filter-search-bar { padding: 0.5rem; flex-direction: column; align-items: stretch; }
+     .filter-search-bar input, .filter-search-bar select { font-size: 0.9rem; margin-left: 0; }
 
-    initializeApp();
-});
+     .transaction-card { padding: 0.6rem; }
+     .transaction-description { font-size: 0.95rem;}
+     .transaction-category, .transaction-date { font-size: 0.8rem; }
+     .transaction-amount { font-size: 1rem; padding-left: 0.5rem; }
+     .transaction-actions { margin-top: 0.3rem; }
+
+     .report-controls button, .report-controls select { font-size: 0.9rem; }
+     .report-table th, .report-table td { font-size: 0.85rem; padding: 0.4rem 0.3rem;}
+
+     #bottom-nav .bottom-nav-btn i { font-size: 1.2rem; }
+     #bottom-nav .bottom-nav-btn span { font-size: 0.6rem; }
+}
+
+
+/* --- Print Styles (for report.html) --- */
+@media print {
+    body {
+        font-family: sans-serif;
+        color: #000;
+        background-color: #fff;
+        line-height: 1.4;
+        font-size: 10pt;
+    }
+
+     /* Hide elements not part of the printable report */
+    body > *:not(#printable-report), /* Hide direct children of body except the report */
+    header,
+    #bottom-nav,
+    .fab,
+    .modal,
+    .theme-switcher,
+    .greeting-bar,
+    .filter-search-bar,
+    #view-transactions,
+    #add-transaction-fab,
+    .report-controls, /* Hide controls on report page itself */
+    .transaction-actions,
+    .header-actions,
+    #manage-categories-nav-btn,
+    .add-category-form,
+    .delete-category-btn,
+    #transaction-modal, /* Hide modals */
+    #category-modal {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+
+    #printable-report, #printable-report * {
+        visibility: visible;
+        color: #000 !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        border: none !important; /* Reset borders, apply specifically below */
+    }
+
+    #printable-report {
+        position: relative;
+        width: 100%;
+        margin: 0;
+        padding: 1cm 1.5cm;
+        border: none;
+        box-shadow: none;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    h1, h2, h3 {
+        color: #000 !important;
+        margin-bottom: 0.5cm;
+        page-break-after: avoid;
+    }
+    h1 { font-size: 18pt; }
+    h2 { font-size: 14pt; }
+    h3 { font-size: 12pt; }
+
+    .card { /* Reset card styling for print */
+        border: 1px solid #ccc !important;
+        padding: 0.5cm;
+        margin-bottom: 0.75cm;
+        background: none !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0.75cm;
+        font-size: 9pt;
+        table-layout: fixed; /* Helps with column width control */
+    }
+    .report-table th, .report-table td {
+        border: 1px solid #999 !important; /* Visible borders for table */
+        padding: 0.25cm 0.2cm; /* Increased padding */
+        text-align: left;
+        vertical-align: top;
+        word-wrap: break-word; /* Allow long words to break */
+    }
+    .report-table th {
+        font-weight: bold;
+        background-color: #eee !important; /* Light gray header */
+    }
+    .report-table td.amount, .report-table td.percentage {
+        text-align: right;
+        white-space: nowrap;
+    }
+
+     /* Specific column widths for Transaction Details table */
+     #transaction-details-table .date-col { width: 15%; }
+     #transaction-details-table .type-col { width: 12%; }
+     #transaction-details-table .desc-col { width: 38%; } /* More space for description */
+     #transaction-details-table .cat-col { width: 20%; }
+     #transaction-details-table .amount-col { width: 15%; }
+
+     /* Specific column widths for Category Breakdown tables */
+     .category-breakdown th:first-child,
+     .category-breakdown td:first-child { width: 50%; } /* Category Name */
+     .category-breakdown .amount { width: 25%; }      /* Total Amount */
+     .category-breakdown .percentage { width: 25%; }  /* Percentage */
+
+
+    .text-income { color: #006400 !important; } /* Dark Green */
+    .text-expense { color: #8B0000 !important; } /* Dark Red */
+
+
+    .chart-container {
+        height: auto !important;
+        max-height: none !important;
+        min-height: none !important;
+        padding: 0.5cm 0;
+        page-break-inside: avoid;
+    }
+     canvas {
+        max-width: 100% !important;
+        height: auto !important;
+        display: block;
+        margin: 0 auto;
+     }
+
+    /* Remove transitions and animations */
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}

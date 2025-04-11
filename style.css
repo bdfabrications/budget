@@ -1,3 +1,5 @@
+/* Base style.css - As of ~4:00 PM CDT 2025-04-11 */
+
 /* --- Global Styles & Variables --- */
 :root {
     --primary-color: #007bff; /* Blue */
@@ -336,7 +338,14 @@ main {
 .report-summary p { margin: 0.3rem 0; font-size: 1.1em; }
 .report-summary #net-balance.text-income { color: var(--success-color); }
 .report-summary #net-balance.text-expense { color: var(--danger-color); }
-.chart-container { position: relative; height: 350px; padding: 1.5rem; }
+
+.chart-container {
+    position: relative;
+    height: 350px; /* <-- Original Fixed Height */
+    padding: 1.5rem;
+    max-height: 550px; /* Max height still relevant */
+    min-height: 250px; /* Min height still relevant */
+}
 .chart-container #no-expense-data-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
 /* --- Floating Action Button (FAB) --- */
@@ -506,7 +515,7 @@ main {
     .theme-switcher { margin-left: 0; } /* Reset margin */
 
 
-    main { margin-top: 1rem; padding: 0 0.75rem; padding-bottom: 70px; /* PADDING FOR BOTTOM NAV */}
+    main { margin-top: 1rem; padding: 0 0.75rem; padding-bottom: 70px; /* ADDED PADDING FOR BOTTOM NAV */}
 
     .card { padding: 1rem; }
 
@@ -520,7 +529,12 @@ main {
     .report-controls { flex-direction: column; align-items: stretch; gap: 0.75rem; }
     .report-controls select { min-width: initial; }
 
-    .chart-container { height: 300px; padding: 1rem; }
+    .chart-container {
+         height: 300px; /* <-- Original Mobile Fixed Height */
+         padding: 1rem;
+         min-height: 200px; /* Keep min/max */
+         max-height: 450px;
+    }
 
     .fab { display: none; } /* Hide FAB on mobile, use bottom nav Add */
 

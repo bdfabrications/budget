@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income/Expense Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Income/Expense Tracker</h1>
+
+    <div class="container">
+        <div class="input-section">
+            <h2>Add New Transaction</h2>
+            <form id="transaction-form">
+                <label for="type">Type:</label>
+                <select id="type" required>
+                    <option value="income">Income</option>
+                    <option value="expense" selected>Expense</option>
+                </select>
+
+                <label for="date">Date:</label>
+                <input type="date" id="date" required>
+
+                <label for="description">Description:</label>
+                <input type="text" id="description" placeholder="e.g., Groceries, Salary" required>
+
+                <label for="amount">Amount:</label>
+                <input type="number" id="amount" step="0.01" min="0.01" placeholder="0.00" required>
+
+                <label for="category">Category:</label>
+                <select id="category" required>
+                    </select>
+                 <button type="button" id="manage-categories-btn">Manage Categories</button>
+
+                <button type="submit">Add Transaction</button>
+            </form>
+             <hr>
+             <h2>Budget Goals (%)</h2>
+             <div id="budget-section">
+                 </div>
+             <button type="button" id="save-budgets-btn">Save Budgets</button>
+        </div>
+
+        <div class="display-section">
+            <h2>Transactions</h2>
+            <ul id="transaction-list">
+                </ul>
+             <hr>
+             <h2>Reports</h2>
+              <div class="report-controls">
+                  <label for="report-period">Select Period:</label>
+                  <select id="report-period">
+                      <option value="weekly">This Week</option>
+                      <option value="biweekly">Last 14 Days</option>
+                      <option value="monthly">This Month</option>
+                      <option value="all">All Time</option>
+                  </select>
+                   <button type="button" id="generate-report-btn">Generate Report</button>
+                   <button type="button" id="view-summary-report-btn">View Printable Summary</button>
+              </div>
+
+             <div class="report-summary">
+                 <h3>Summary</h3>
+                 <p>Total Income: <span id="total-income">0.00</span></p>
+                 <p>Total Expenses: <span id="total-expenses">0.00</span></p>
+                 <p>Net Balance: <span id="net-balance">0.00</span></p>
+             </div>
+
+            <div class="chart-container">
+                <h3>Expense Breakdown</h3>
+                <canvas id="expense-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn category-close">&times;</span>
+            <h2>Manage Categories</h2>
+            <div id="category-manager">
+                 <h4>Income Categories</h4>
+                 <ul id="income-category-list"></ul>
+                 <input type="text" id="new-income-category" placeholder="New Income Category">
+                 <button type="button" id="add-income-category-btn">Add</button>
+
+                 <h4>Expense Categories</h4>
+                 <ul id="expense-category-list"></ul>
+                 <input type="text" id="new-expense-category" placeholder="New Expense Category">
+                 <button type="button" id="add-expense-category-btn">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn edit-close">&times;</span>
+            <h2>Edit Transaction</h2>
+            <form id="edit-transaction-form">
+                <input type="hidden" id="edit-id"> <label for="edit-type">Type:</label>
+                <select id="edit-type" required>
+                    <option value="income">Income</option>
+                    <option value="expense">Expense</option>
+                </select>
+
+                <label for="edit-date">Date:</label>
+                <input type="date" id="edit-date" required>
+
+                <label for="edit-description">Description:</label>
+                <input type="text" id="edit-description" required>
+
+                <label for="edit-amount">Amount:</label>
+                <input type="number" id="edit-amount" step="0.01" min="0.01" required>
+
+                <label for="edit-category">Category:</label>
+                <select id="edit-category" required>
+                    </select>
+
+                <button type="submit">Update Transaction</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

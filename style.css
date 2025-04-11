@@ -1,0 +1,289 @@
+/* General Body and Typography */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    margin: 20px;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+h1, h2, h3 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+}
+h1 { font-size: 2.2em; color: #2c3e50;}
+h2 { font-size: 1.6em; margin-top: 30px; color: #34495e;}
+h3 { font-size: 1.2em; font-weight: normal; color: #7f8c8d;}
+h4 { color: #555; margin-top: 15px; margin-bottom: 5px; }
+
+hr {
+    margin: 30px 0;
+    border: 0;
+    border-top: 1px solid #eee;
+}
+
+/* Main Layout Container */
+.container {
+    display: flex;
+    flex-wrap: wrap; /* Allow sections to wrap on smaller screens */
+    gap: 30px;
+    max-width: 1200px;
+    margin: 20px auto;
+    background: #fff;
+    padding: 25px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.input-section, .display-section {
+    flex: 1; /* Allows sections to grow and shrink */
+    min-width: 320px; /* Minimum width before wrapping */
+    padding: 15px;
+}
+
+/* Form Styling (Add, Edit, Budget) */
+#transaction-form label,
+#budget-section label,
+#edit-transaction-form label {
+    display: block;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 0.95em;
+    color: #555;
+}
+
+#transaction-form input[type="text"],
+#transaction-form input[type="number"],
+#transaction-form input[type="date"],
+#transaction-form select,
+#budget-section input[type="number"],
+#edit-transaction-form input[type="text"],
+#edit-transaction-form input[type="number"],
+#edit-transaction-form input[type="date"],
+#edit-transaction-form select {
+    width: calc(100% - 22px); /* Adjust for padding/border */
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.075);
+}
+#transaction-form select, #edit-transaction-form select {
+     width: 100%; /* Make selects full width */
+}
+
+/* Buttons */
+button, .button {
+    display: inline-block;
+    background-color: #5cb85c; /* Green default */
+    color: white;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-right: 8px;
+    text-decoration: none;
+    text-align: center;
+    font-size: 1em;
+    transition: background-color 0.2s ease; /* Smooth hover effect */
+}
+button:hover, .button:hover {
+    opacity: 0.9;
+}
+#transaction-form button[type="submit"] { width: 100%; margin-top: 15px; }
+#manage-categories-btn { background-color: #f0ad4e; } /* Orange */
+#save-budgets-btn { background-color: #5bc0de; width: 100%; margin-top: 15px; } /* Blue, full width */
+#generate-report-btn { background-color: #337ab7; } /* Darker Blue */
+#view-summary-report-btn { background-color: #777; } /* Grey */
+
+/* Transaction List */
+#transaction-list {
+    list-style: none;
+    padding: 0;
+    max-height: 400px; /* Adjust height as needed */
+    overflow-y: auto; /* Enable scrolling for long lists */
+    border: 1px solid #eee;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    background-color: #fdfdfd;
+}
+
+#transaction-list li {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping within list item */
+    gap: 10px;
+}
+#transaction-list li:last-child { border-bottom: none; }
+#transaction-list li:hover { background-color: #f9f9f9; } /* Subtle hover effect */
+
+#transaction-list li .details {
+    flex-grow: 1; /* Take available space */
+    margin-right: 10px;
+    font-size: 0.95em;
+    color: #444;
+}
+#transaction-list li .details span { /* For category text */
+    font-style: italic;
+    color: #555;
+    font-size: 0.9em;
+    margin-left: 4px;
+}
+#transaction-list li .amount {
+    font-weight: 600;
+    min-width: 90px; /* Ensure enough space */
+    text-align: right;
+    font-family: 'Courier New', Courier, monospace; /* Monospace for numbers */
+}
+#transaction-list li .income { color: #28a745; } /* Green */
+#transaction-list li .expense { color: #dc3545; } /* Red */
+
+#transaction-list li .actions {
+     display: flex;
+     gap: 5px; /* Space between buttons */
+}
+#transaction-list li .actions button {
+    padding: 4px 8px; /* Smaller buttons */
+    font-size: 0.85em;
+    margin: 0; /* Reset default margins */
+}
+.edit-btn { background: #ffc107; color: #333;} /* Yellow */
+.edit-btn:hover { background: #e0a800; }
+.delete-btn { background: #dc3545; } /* Red */
+.delete-btn:hover { background: #c82333; }
+
+/* Reports Section Styling */
+.report-controls {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+.report-controls label { margin: 0 5px 0 0; font-weight: 600; color: #555;}
+.report-controls select { padding: 8px 10px; border-radius: 4px; border: 1px solid #ccc; }
+.report-controls button { margin-top: 0; } /* Align buttons vertically */
+
+.report-summary {
+    background-color: #e9ecef;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+.report-summary h3 { margin-bottom: 15px; color: #495057;}
+.report-summary p { margin: 8px 0; font-size: 1.15em;}
+.report-summary span { font-weight: 600; }
+.report-summary #net-balance.positive { color: #28a745; }
+.report-summary #net-balance.negative { color: #dc3545; }
+
+.chart-container {
+    position: relative;
+    height: 350px;
+    width: 100%;
+    max-width: 550px; /* Control max chart size */
+    margin: 20px auto; /* Center the chart container */
+}
+
+/* Budget Section Styling */
+#budget-section div {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    padding: 5px 0;
+    border-bottom: 1px dotted #eee;
+}
+#budget-section label {
+    flex-basis: 60%; /* Adjust space distribution */
+    min-width: 120px;
+    margin: 0 10px 0 0;
+    font-weight: normal;
+    color: #444;
+}
+#budget-section input {
+    flex-basis: 30%;
+    width: 65px;
+    padding: 6px;
+    margin: 0;
+    text-align: right;
+    border: 1px solid #ccc; /* Add border */
+    border-radius: 3px;
+}
+#budget-section span { /* Style the '%' sign */
+    margin-left: 5px;
+    color: #555;
+}
+
+
+/* Modal Styling (Common for Edit and Category modals) */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.5); /* Semi-transparent background */
+}
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto; /* Center vertically */
+    padding: 25px 30px;
+    border: 1px solid #888;
+    width: 90%; /* Responsive width */
+    max-width: 550px; /* Max width */
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+.modal-content h2 { margin-top: 0; } /* Remove extra space above modal title */
+
+.close-btn {
+    color: #aaa;
+    position: absolute;
+    top: 10px; right: 20px;
+    font-size: 32px;
+    font-weight: bold;
+    line-height: 1; /* Ensure proper vertical alignment */
+}
+.close-btn:hover, .close-btn:focus {
+    color: black; text-decoration: none; cursor: pointer;
+}
+
+/* Category Manager Specific Styles */
+#category-manager { padding-top: 10px; }
+#category-manager h4 { margin-top: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+#category-manager ul { list-style: none; padding: 0; max-height: 150px; overflow-y: auto; margin-bottom: 15px;}
+#category-manager li {
+    padding: 10px 5px;
+    border-bottom: 1px dashed #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#category-manager input[type="text"] { width: calc(70% - 12px); padding: 8px; margin-right: 5px; }
+#category-manager button { padding: 8px 12px; margin-top: 0; background-color: #5bc0de;} /* Blue add button */
+.delete-category-btn { background: #dc3545; font-size: 0.8em; padding: 4px 8px; margin-left: 10px; }
+.delete-category-btn:hover { background: #c82333; }
+
+/* Edit Modal Specific Styles */
+#edit-transaction-form label { margin-top: 12px; }
+#edit-transaction-form button[type="submit"] { width: 100%; margin-top: 15px; background-color: #ffc107; color: #333;} /* Yellow update button */
+
+
+/* Reference Styles for Printable Report Page (Embedded in JS) */
+/* These styles are not directly used by index.html but defined here for completeness */
+/* .report-page-body, .report-page-h1, .report-page-meta, etc. */

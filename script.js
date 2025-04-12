@@ -71,8 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statementMonthSelect = document.getElementById('statement-month');
     const statementYearInput = document.getElementById('statement-year');
     const generateStatementBtn = document.getElementById('generate-statement-btn');
-    const clearStatementBtn = document.getElementById('clear-statement-btn');
-    const statementOutputDiv = document.getElementById('monthly-statement-output');
+    // Removed: statementOutputDiv and clearStatementBtn references
 
 
     // Filtering Elements
@@ -156,10 +155,9 @@ document.addEventListener('DOMContentLoaded', () => {
         bottomNavBtns.forEach(btn => { if (btn.dataset.view) btn.classList.toggle('active', btn.dataset.view === viewId); });
 
         if (viewId === 'view-report') {
-             generateReport();
-        } else {
-             statementOutputDiv.innerHTML = '';
+             generateReport(); // Refresh report summary/charts when switching to report view
         }
+        // Removed clearing statement output here
 
         if (viewId === 'view-transactions') renderTransactionList();
     };
@@ -559,78 +557,21 @@ document.addEventListener('DOMContentLoaded', () => {
         window.open(url, '_blank');
     };
 
+    // --- Updated Monthly Statement Function ---
      const generateMonthlyStatement = () => {
-        const selectedMonth = parseInt(statementMonthSelect.value);
-        const selectedYear = parseInt(statementYearInput.value);
+        const selectedMonth = statementMonthSelect.value; // Keep as string for URL param
+        const selectedYear = statementYearInput.value;
 
-        if (isNaN(selectedYear) || selectedYear < 2000 || selectedYear > 2100) {
+        if (!selectedYear || isNaN(parseInt(selectedYear)) || selectedYear < 2000 || selectedYear > 2100) {
             alert('Please enter a valid year (e.g., 2024).');
-            statementOutputDiv.innerHTML = '<p style="color: var(--danger-color);">Invalid year entered.</p>';
             return;
         }
 
-        const monthTransactions = transactions.filter(t => {
-             try {
-                const transactionDate = new Date(t.date + 'T00:00:00');
-                return !isNaN(transactionDate.getTime()) && transactionDate.getMonth() === selectedMonth && transactionDate.getFullYear() === selectedYear;
-             } catch (e) { return false; }
-        }).sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Construct URL for the new statement page
+        const url = `statement.html?month=${encodeURIComponent(selectedMonth)}&year=${encodeURIComponent(selectedYear)}`;
 
-        let monthlyIncome = 0;
-        let monthlyExpenses = 0;
-        let monthlySavingsDeposit = 0;
-        let monthlySavingsWithdrawal = 0;
-
-        let statementContent = `----------------------------------------\n`;
-         statementContent += `Date       | Type    | Description          | Category           | Amount\n`;
-         statementContent += `----------------------------------------\n`;
-
-
-        if (monthTransactions.length === 0) {
-            statementContent += 'No transactions found for this month.\n';
-        } else {
-            monthTransactions.forEach(t => {
-                 if (t.category === 'Savings Deposit') {
-                      monthlySavingsDeposit += t.amount;
-                 } else if (t.category === 'Savings Withdrawal') {
-                      monthlySavingsWithdrawal += t.amount;
-                 } else if (t.type === 'income') {
-                    monthlyIncome += t.amount;
-                 } else if (t.type === 'expense') {
-                    monthlyExpenses += t.amount;
-                 }
-
-                const dateStr = formatDate(t.date, 'MM/DD/YY').padEnd(10);
-                const typeStr = (t.type.charAt(0).toUpperCase() + t.type.slice(1)).padEnd(8);
-                const descStr = t.description.substring(0, 20).padEnd(20);
-                const catStr = t.category.substring(0, 18).padEnd(18);
-                const amountPrefix = (t.type === 'income' || t.category === 'Savings Deposit') ? '+' : '-';
-                const amountStr = (amountPrefix + formatCurrency(t.amount)).padStart(8);
-
-                 statementContent += `${dateStr}| ${typeStr}| ${descStr}| ${catStr}| ${amountStr}\n`;
-            });
-              statementContent += `----------------------------------------\n`;
-        }
-
-        const netMonthlyOperating = monthlyIncome - monthlyExpenses;
-        const netMonthlySavings = monthlySavingsDeposit - monthlySavingsWithdrawal;
-
-         let summaryContent = `\nSummary (Operating):\n`;
-         summaryContent += ` Total Income:      +${formatCurrency(monthlyIncome)}\n`;
-         summaryContent += ` Total Expenses:    -${formatCurrency(monthlyExpenses)}\n`;
-         summaryContent += ` Net Balance:        ${netMonthlyOperating >= 0 ? '+' : ''}${formatCurrency(netMonthlyOperating)}\n`;
-         summaryContent += `\nSummary (Savings):\n`;
-         summaryContent += ` Deposits:          +${formatCurrency(monthlySavingsDeposit)}\n`;
-         summaryContent += ` Withdrawals:       -${formatCurrency(monthlySavingsWithdrawal)}\n`;
-         summaryContent += ` Net Savings Flow:   ${netMonthlySavings >= 0 ? '+' : ''}${formatCurrency(netMonthlySavings)}\n`;
-         summaryContent += `----------------------------------------\n`;
-
-
-         let statementHTML = `<h4>Monthly Statement: ${statementMonthSelect.options[selectedMonth].text} ${selectedYear}</h4>`;
-         statementHTML += `<pre>${statementContent}</pre>`;
-         statementHTML += `<pre>${summaryContent}</pre>`;
-
-        statementOutputDiv.innerHTML = statementHTML;
+        // Open the statement in a new tab/window
+        window.open(url, '_blank');
     };
 
 
@@ -749,7 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadFileInput.addEventListener('change', handleLoadDataFromFile);
     clearAllBtn.addEventListener('click', clearAllTransactions);
     generateStatementBtn.addEventListener('click', generateMonthlyStatement);
-    clearStatementBtn.addEventListener('click', () => { statementOutputDiv.innerHTML = ''; });
+    // Removed clearStatementBtn event listener
 
 
     // --- Initialization ---

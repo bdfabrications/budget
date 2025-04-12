@@ -105,6 +105,7 @@ input:focus, select:focus {
 
 i { margin-right: 0.5em; }
 button i { margin-right: 0.25em; }
+/* Updated icon list */
 button i.fa-plus, button i.fa-check, button i.fa-sync-alt, button i.fa-save, button i.fa-folder-open, button i.fa-print, button i.fa-trash-alt, button i.fa-file-alt, button i.fa-times-circle {
     margin-right: 0.5em;
 }
@@ -363,27 +364,7 @@ main {
 #statement-year { width: 100px; flex-grow: 0; }
 .monthly-statement-controls button { flex-shrink: 0; }
 
-#monthly-statement-output {
-     font-family: monospace;
-     white-space: pre-wrap;
-     background-color: var(--bg-color);
-     padding: 1rem;
-     border-radius: var(--border-radius);
-     border: 1px dashed var(--border-color);
-     margin-top: 1rem;
-     max-height: 400px;
-     overflow-y: auto;
-}
-#monthly-statement-output h4 {
-     margin-bottom: 0.5rem;
-     font-family: var(--font-family);
-     white-space: normal;
-}
-#monthly-statement-output p {
-    margin-bottom: 0.25rem;
-    font-family: var(--font-family);
-    white-space: normal;
-}
+/* Removed styles for #monthly-statement-output */
 
 
 /* --- Chart Styles --- */
@@ -668,7 +649,7 @@ main {
 }
 
 
-/* --- Print Styles (for report.html) --- */
+/* --- Print Styles (for report.html AND statement.html) --- */
 @media print {
     body {
         font-family: sans-serif;
@@ -678,7 +659,8 @@ main {
         font-size: 10pt;
     }
 
-    body > *:not(#printable-report),
+    /* Hide non-printable elements by default */
+    body > *:not(#printable-report):not(#printable-statement),
     header, #bottom-nav, .fab, .modal, .theme-switcher, .greeting-bar,
     .filter-search-bar, #view-transactions, #add-transaction-fab,
     .report-controls, .monthly-statement-controls, .transaction-actions,
@@ -689,6 +671,7 @@ main {
     }
 
 
+    /* Style the printable report section */
     #printable-report, #printable-report * {
         visibility: visible;
         color: #000 !important;
@@ -696,7 +679,6 @@ main {
         box-shadow: none !important;
         border: none !important;
     }
-
     #printable-report {
         position: relative;
         width: 100%;
@@ -708,20 +690,57 @@ main {
         print-color-adjust: exact;
     }
 
+    /* Style the printable statement section (from statement.html) */
+    #printable-statement, #printable-statement * {
+        visibility: visible;
+        color: #000 !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        border: 1px solid #ccc !important; /* Add simple border for statement card */
+    }
+     #printable-statement {
+        position: relative;
+        width: 100%;
+        margin: 0;
+        padding: 1cm 1.5cm;
+        border: none !important; /* Remove outer print border */
+        box-shadow: none;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+     }
+     #printable-statement pre {
+         font-size: 9pt;
+         border: 1px dashed #999 !important;
+         padding: 0.5rem;
+         background: none !important;
+         color: #000 !important;
+         page-break-inside: avoid;
+     }
+
+
+    /* Common print styles for headings */
     h1, h2, h3, h4 {
         color: #000 !important;
         margin-bottom: 0.5cm;
         page-break-after: avoid;
         text-align: left;
     }
-    h1 { font-size: 18pt; }
+    h1 { font-size: 18pt; } /* Report title */
     h2 { font-size: 14pt; }
     h3 { font-size: 12pt; border-bottom: 1px solid #999; padding-bottom: 0.2cm; }
     h4 { font-size: 11pt; margin-bottom: 0.3cm; }
-    .charts-container h4 { text-align: center; }
+
+    /* Specific heading styles for statement page */
+    #printable-statement h1 {
+        font-size: 14pt;
+        border-bottom: 1px solid #999;
+        padding-bottom: 0.2cm;
+        margin-bottom: 0.5cm;
+    }
 
 
-    .card {
+    /* Report specific card/chart layout */
+    #printable-report .card {
         border: 1px solid #ccc !important;
         padding: 0.5cm;
         margin-bottom: 0.75cm;
@@ -729,8 +748,8 @@ main {
         box-shadow: none !important;
         page-break-inside: avoid;
     }
-     .report-section.card:has(.charts-container) { padding-bottom: 0; }
-     .charts-container {
+     #printable-report .report-section.card:has(.charts-container) { padding-bottom: 0; }
+     #printable-report .charts-container {
           page-break-inside: avoid;
           padding-top: 0.5cm;
           border-top: 1px dashed #ccc;
@@ -742,6 +761,7 @@ main {
      }
 
 
+    /* Report Table Styles */
     .report-table {
         width: 100%;
         border-collapse: collapse;
@@ -771,13 +791,8 @@ main {
      .category-breakdown .percentage { width: 25%; }
 
 
-    .text-income { color: #006400 !important; }
-    .text-expense { color: #8B0000 !important; }
-    .text-savings { color: #005073 !important; }
-    .text-danger { color: #8B0000 !important; }
-
-
-    .chart-container {
+    /* Report Chart Container Styles */
+    #printable-report .chart-container {
         flex-basis: 48% !important; /* Aim for two charts side-by-side */
         max-width: 48% !important;
         min-width: 280px !important; /* Min width for chart readability */
@@ -794,10 +809,11 @@ main {
         justify-content: flex-start; /* Align title top */
         align-items: center; /* Center canvas horizontally */
     }
-     .chart-container h4 { /* Ensure title doesn't take too much space */
+     #printable-report .chart-container h4 { /* Ensure title doesn't take too much space */
         flex-shrink: 0;
+        text-align: center; /* Center chart titles for print report*/
      }
-     canvas {
+     #printable-report canvas {
         max-width: 100% !important;
         height: auto !important; /* Let height be determined by aspect ratio */
         max-height: 280px !important; /* Limit canvas height */
@@ -805,10 +821,17 @@ main {
         margin-top: 0.3cm; /* Space between title and canvas */
         flex-grow: 1; /* Allow canvas to take available space */
      }
-      .no-data-message {
+      #printable-report .no-data-message {
          display: none !important;
      }
 
+    /* Common Print Colors */
+    .text-income { color: #006400 !important; }
+    .text-expense { color: #8B0000 !important; }
+    .text-savings { color: #005073 !important; }
+    .text-danger { color: #8B0000 !important; }
 
+
+    /* Disable transitions and animations for print */
     * { transition: none !important; animation: none !important; }
 }

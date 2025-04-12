@@ -42,14 +42,13 @@
 
             <div class="filter-search-bar">
                  <i class="fas fa-search"></i>
-                <input type="text" id="search-input" placeholder="Search by description or category...">
+                <input type="text" id="search-input" placeholder="Search description, category, date, or amount...">
                  <select id="filter-type">
                      <option value="all">All Types</option>
                      <option value="income">Income Only</option>
                      <option value="expense">Expenses Only</option>
                  </select>
             </div>
-
             <div style="text-align: right; margin-bottom: 1rem;">
                  <button id="clear-all-transactions-btn" class="btn-danger">
                      <i class="fas fa-trash-alt"></i> Clear All Transactions
@@ -108,7 +107,7 @@
                  </div>
             </div>
 
-             <div class="monthly-statement-controls card" style="margin-top: 1.5rem;"> <h3>Generate Monthly Statement</h3>
+              <div class="monthly-statement-controls card" style="margin-top: 1.5rem;"> <h3>Generate Monthly Statement</h3>
                   <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                        <label for="statement-month">Month:</label>
                        <select id="statement-month">
@@ -132,9 +131,15 @@
                        <button type="button" id="generate-statement-btn" class="btn-primary">
                            <i class="fas fa-file-alt"></i> Generate Statement
                        </button>
-                       </div>
+                       <button type="button" id="clear-statement-btn" class="btn-secondary">
+                            <i class="fas fa-times-circle"></i> Clear
+                       </button>
                   </div>
+                  <div id="monthly-statement-output" style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                      </div>
               </div>
+
+        </div>
     </main>
 
     <button id="add-transaction-fab" class="fab"><i class="fas fa-plus"></i></button>

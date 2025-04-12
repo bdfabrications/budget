@@ -1,5 +1,6 @@
 /* Base style.css - As of Sat Apr 12 2025 */
 /* Includes modifications for savings data, conditional headers (handled in JS), moved statement section, centered FAB icon, and printable savings chart */
+/* Added Date/Amount filter styles */
 
 /* --- Global Styles & Variables --- */
 :root {
@@ -143,6 +144,16 @@ button i.fa-plus, button i.fa-check, button i.fa-sync-alt, button i.fa-save, but
 .btn-icon { background: none; border: none; padding: 0.3rem; color: var(--text-muted-color); }
 .btn-icon:hover { color: var(--primary-color); }
 
+/* Added smaller button variant */
+.btn-sm {
+    padding: 0.3rem 0.6rem !important;
+    font-size: 0.8rem !important;
+}
+.btn-sm i {
+    margin-right: 0.2em !important;
+}
+
+
 .info-message {
     text-align: center;
     color: var(--text-muted-color);
@@ -249,6 +260,7 @@ main {
 
 
 /* --- Transaction List View --- */
+/* Updated Filter Bar Styles */
 .filter-search-bar {
     display: flex;
     align-items: center;
@@ -258,26 +270,68 @@ main {
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-color);
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    flex-wrap: wrap; /* Allow wrapping */
+    gap: 0.75rem; /* Add gap between items */
 }
-.filter-search-bar i { color: var(--text-muted-color); flex-shrink: 0; }
+.filter-search-bar i {
+    color: var(--text-muted-color);
+    flex-shrink: 0;
+}
 .filter-search-bar input[type="text"] {
-    flex-grow: 1;
+    flex-grow: 1; /* Allow text input to grow */
     border: none;
     background: none;
     padding-left: 0.5rem;
-    min-width: 150px;
+    min-width: 150px; /* Minimum width */
     width: auto;
 }
-.filter-search-bar input[type="text"]:focus { box-shadow: none; }
+.filter-search-bar input[type="text"]:focus {
+    box-shadow: none;
+}
 .filter-search-bar select {
     width: auto;
-    margin-left: 0.5rem;
+    /* margin-left: 0.5rem; */ /* Replaced by gap */
     background: none;
     border: none;
     flex-shrink: 0;
 }
+
+/* Styles for new filter elements */
+.filter-search-bar .filter-label {
+    font-size: 0.85rem;
+    color: var(--text-muted-color);
+    flex-shrink: 0; /* Prevent label from shrinking */
+    margin-left: 0.5rem; /* Space before label */
+    margin-bottom: 0; /* Align with inputs */
+}
+.filter-search-bar .filter-input {
+    padding: 0.3rem 0.5rem; /* Smaller padding */
+    width: auto; /* Allow natural width */
+    min-width: 100px; /* Minimum width */
+    flex-shrink: 0; /* Prevent shrinking */
+    border: 1px solid var(--border-color); /* Add border back */
+    background-color: var(--bg-color); /* Match background */
+    height: auto; /* Reset height if needed */
+    font-size: 0.9rem; /* Match other inputs */
+    line-height: normal; /* Reset line height */
+}
+.filter-search-bar input[type="date"].filter-input {
+    min-width: 130px; /* Specific min-width for date */
+}
+.filter-search-bar input[type="number"].filter-input {
+    min-width: 80px; /* Specific min-width for amount */
+}
+.filter-search-bar button#clear-filters-btn {
+    padding: 0.3rem 0.6rem; /* Smaller button */
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    margin-left: auto; /* Push clear button to the right */
+}
+.filter-search-bar button#clear-filters-btn i {
+    margin-right: 0.2em;
+}
+/* End Updated Filter Bar Styles */
+
 
 #transaction-list { list-style: none; padding: 0; }
 .transaction-card {
@@ -427,6 +481,7 @@ main {
 .report-table td.amount { text-align: right; font-weight: 500; white-space: nowrap; }
 .report-table td.percentage { text-align: right; font-size: 0.85rem; color: var(--text-muted-color);}
 
+/* Default Column Widths (for wider screens) */
 #transaction-details-table .date-col { width: 12%; }
 #transaction-details-table .type-col { width: 10%; }
 #transaction-details-table .desc-col { width: 40%; }
@@ -586,8 +641,34 @@ main {
 
     .card { padding: 1rem; }
 
-    .filter-search-bar { padding: 0.75rem; }
-    .filter-search-bar input[type="text"] { min-width: 120px; }
+    /* Filter bar responsiveness */
+    .filter-search-bar {
+        gap: 0.5rem; /* Slightly smaller gap */
+    }
+    .filter-search-bar .filter-label {
+         margin-left: 0; /* Remove left margin */
+         width: 100%; /* Make label take full width */
+         text-align: left;
+         margin-bottom: -0.2rem; /* Reduce space below label */
+    }
+     .filter-search-bar .filter-input {
+         width: calc(50% - 0.5rem); /* Approx half width minus gap */
+         min-width: 100px; /* Maintain min width */
+     }
+      .filter-search-bar input[type="text"] {
+         width: 100%; /* Full width on small screens */
+         min-width: 120px;
+      }
+       .filter-search-bar select {
+         width: 100%;
+       }
+       .filter-search-bar button#clear-filters-btn {
+         margin-left: 0; /* Reset margin */
+         width: 100%;
+         margin-top: 0.5rem;
+       }
+    /* End filter bar responsiveness */
+
 
     .transaction-card { padding: 0.75rem; }
     .transaction-details { margin-bottom: 0.5rem; }
@@ -631,7 +712,15 @@ main {
      input:checked + .slider:before { transform: translateX(18px); }
 
      .filter-search-bar { padding: 0.5rem; flex-direction: column; align-items: stretch; }
-     .filter-search-bar input, .filter-search-bar select { font-size: 0.9rem; margin-left: 0; }
+     .filter-search-bar input, .filter-search-bar select, .filter-search-bar .filter-input {
+         font-size: 0.9rem;
+         margin-left: 0;
+         width: 100%; /* Full width in column layout */
+     }
+     .filter-search-bar .filter-label {
+         width: 100%;
+         margin-bottom: 0.2rem;
+     }
 
      .transaction-card { padding: 0.6rem; }
      .transaction-description { font-size: 0.95rem;}
@@ -761,34 +850,105 @@ main {
      }
 
 
-    /* Report Table Styles */
-    .report-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 0.75cm;
-        font-size: 9pt;
-        table-layout: fixed;
+    /* --- Report Table Styles (Category Breakdown remains standard table) --- */
+     #printable-report .report-table:not(#transaction-details-table) { /* Apply only to non-transaction tables */
+         width: 100%;
+         border-collapse: collapse;
+         margin-bottom: 0.75cm;
+         font-size: 9pt;
+         table-layout: fixed;
          page-break-inside: avoid;
-    }
-    .report-table th, .report-table td {
-        border: 1px solid #999 !important;
-        padding: 0.25cm 0.2cm;
-        text-align: left;
-        vertical-align: top;
-        word-wrap: break-word;
-    }
-    .report-table th { font-weight: bold; background-color: #eee !important; }
-    .report-table td.amount, .report-table td.percentage { text-align: right; white-space: nowrap; }
-
-     #transaction-details-table .date-col { width: 15%; }
-     #transaction-details-table .type-col { width: 12%; }
-     #transaction-details-table .desc-col { width: 38%; }
-     #transaction-details-table .cat-col { width: 20%; }
-     #transaction-details-table .amount-col { width: 15%; }
-
+     }
+     #printable-report .report-table:not(#transaction-details-table) th,
+     #printable-report .report-table:not(#transaction-details-table) td {
+         border: 1px solid #999 !important;
+         padding: 0.25cm 0.2cm;
+         text-align: left;
+         vertical-align: top;
+         word-wrap: break-word;
+     }
+     #printable-report .report-table:not(#transaction-details-table) th {
+         font-weight: bold;
+         background-color: #eee !important;
+     }
+     #printable-report .report-table:not(#transaction-details-table) td.amount,
+     #printable-report .report-table:not(#transaction-details-table) td.percentage {
+         text-align: right;
+         white-space: nowrap;
+     }
+    /* Specific widths for category tables */
      .category-breakdown th:first-child, .category-breakdown td:first-child { width: 50%; }
      .category-breakdown .amount { width: 25%; }
      .category-breakdown .percentage { width: 25%; }
+
+
+    /* --- Responsive Card Layout for Transaction Table in Print --- */
+    #transaction-details-table {
+        border-collapse: collapse !important; /* Override base style */
+        width: 100% !important;
+    }
+    /* Hide the original table header */
+    #transaction-details-table thead {
+        display: none !important;
+    }
+    /* Make rows behave like cards */
+    #transaction-details-table tr {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 1rem !important;
+        border: 1px solid #bbb !important; /* Card border */
+        box-shadow: none !important;
+        padding: 0.5rem !important;
+        page-break-inside: avoid !important; /* Avoid breaking card across pages */
+    }
+    /* Make cells behave like block elements */
+    #transaction-details-table td {
+        display: block !important;
+        width: 100% !important;
+        border: none !important; /* Remove cell borders */
+        border-bottom: 1px dashed #ccc !important; /* Line between fields */
+        padding: 0.4rem 0.4rem 0.4rem 50% !important; /* Right-align content, make space for label */
+        position: relative !important;
+        text-align: right !important; /* Align cell content to the right */
+        min-height: 1.5em; /* Ensure space for label */
+        font-size: 9pt !important; /* Ensure consistent font size */
+        word-wrap: break-word !important; /* Ensure long words wrap */
+    }
+    #transaction-details-table td:last-child {
+        border-bottom: none !important; /* Remove border from last cell in card */
+    }
+    /* Add the label using the data-label attribute */
+    #transaction-details-table td::before {
+        content: attr(data-label); /* Get text from data-label */
+        position: absolute !important;
+        left: 0.4rem !important;
+        top: 0.4rem; /* Align with padding */
+        width: 45% !important; /* Adjust as needed */
+        padding-right: 0.5rem !important;
+        white-space: nowrap !important;
+        text-align: left !important; /* Align label text left */
+        font-weight: bold !important;
+        color: #333 !important; /* Slightly darker label for print */
+        font-size: 9pt !important; /* Match cell font size */
+        vertical-align: middle !important;
+    }
+    /* Override alignment for description */
+     #transaction-details-table td.desc-col {
+         text-align: left !important; /* Align description text left below label */
+         padding-left: 0.4rem !important; /* Reset left padding */
+         padding-top: 1.8em; /* Push content below label */
+     }
+      #transaction-details-table td.desc-col::before {
+         top: 0.4rem; /* Keep label at top */
+         width: 100%; /* Allow label full width */
+         white-space: normal !important; /* Allow label to wrap if needed */
+      }
+    /* Ensure amount alignment remains right */
+     #transaction-details-table td.amount {
+         text-align: right !important;
+         white-space: nowrap !important;
+     }
+    /* --- End Responsive Card Layout --- */
 
 
     /* Report Chart Container Styles */

@@ -49,6 +49,13 @@
                      <option value="expense">Expenses Only</option>
                  </select>
             </div>
+
+            <div style="text-align: right; margin-bottom: 1rem;">
+                 <button id="clear-all-transactions-btn" class="btn-danger">
+                     <i class="fas fa-trash-alt"></i> Clear All Transactions
+                 </button>
+            </div>
+
             <div id="transaction-list-container">
                 <p id="no-transactions-message" class="info-message">No transactions yet. Click the '+' button to add one!</p>
                 <ul id="transaction-list">
@@ -57,7 +64,7 @@
         </div>
 
         <div id="view-report" class="view">
-             <div class="report-controls">
+             <div class="report-controls card" style="margin-bottom: 1rem;">
                   <label for="report-period">Select Period:</label>
                   <select id="report-period">
                       <option value="weekly">This Week</option>
@@ -66,33 +73,77 @@
                       <option value="all">All Time</option>
                       <option value="custom">Custom Range</option>
                   </select>
-                  <div id="custom-date-range" style="display: none; margin-top: 1rem; gap: 0.5rem; display: flex; align-items: center;">
+                  <div id="custom-date-range" style="display: none; margin-top: 1rem; gap: 0.5rem; display: flex; align-items: center; flex-wrap: wrap;">
                     <label for="start-date">Start Date:</label>
                     <input type="date" id="start-date">
                     <label for="end-date">End Date:</label>
                     <input type="date" id="end-date">
                   </div>
-                   <button type="button" id="generate-report-btn"><i class="fas fa-sync-alt"></i> Generate</button>
+                   <button type="button" id="generate-report-btn"><i class="fas fa-sync-alt"></i> Generate Report</button>
                    <button type="button" id="generate-print-report-btn"><i class="fas fa-print"></i> Generate Printable Report</button>
               </div>
 
-            <div class="chart-container card">
-                <h3>Expense Breakdown</h3>
-                <canvas id="expense-chart"></canvas>
-                <p id="no-expense-data-message" class="info-message" style="display: none;">No expense data for selected period.</p>
-            </div>
-
              <div class="report-summary card">
                  <h3>Summary</h3>
-                 <p>Total Income: <span id="total-income">0.00</span></p>
-                 <p>Total Expenses: <span id="total-expenses">0.00</span></p>
-                 <p>Net Balance: <span id="net-balance">0.00</span></p>
+                 <p>Total Income (Operating): <span id="total-income" class="text-income">0.00</span></p>
+                 <p>Total Expenses (Operating): <span id="total-expenses" class="text-expense">0.00</span></p>
+                 <p>Net Balance (Operating): <span id="net-balance">0.00</span></p>
+                 <hr style="border-top: 1px dashed var(--border-color); margin: 0.75rem 0;">
+                 <p>Total Savings Deposits: <span id="total-savings-deposits" class="text-savings">0.00</span></p>
+                 <p>Total Savings Withdrawals: <span id="total-savings-withdrawals" class="text-savings">0.00</span></p>
+                 <p>Net Savings Change: <span id="net-savings" class="text-savings">0.00</span></p>
              </div>
+
+            <div class="charts-container">
+                 <div class="chart-container card">
+                     <h3 id="expense-breakdown-header">Expense Breakdown</h3>
+                     <canvas id="expense-chart"></canvas>
+                     <p id="no-expense-data-message" class="info-message" style="display: none;">No expense data for selected period.</p>
+                 </div>
+
+                 <div id="savings-chart-container" class="chart-container card">
+                      <h3 id="savings-trend-header">Savings Trend</h3>
+                      <canvas id="savings-chart"></canvas>
+                      <p id="no-savings-data-message" class="info-message" style="display: none;">No savings data for selected period.</p>
+                 </div>
+            </div>
+
+              <div class="monthly-statement-controls card" style="margin-top: 1.5rem;"> <h3>Generate Monthly Statement</h3>
+                  <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                       <label for="statement-month">Month:</label>
+                       <select id="statement-month">
+                           <option value="0">January</option>
+                           <option value="1">February</option>
+                           <option value="2">March</option>
+                           <option value="3">April</option>
+                           <option value="4">May</option>
+                           <option value="5">June</option>
+                           <option value="6">July</option>
+                           <option value="7">August</option>
+                           <option value="8">September</option>
+                           <option value="9">October</option>
+                           <option value="10">November</option>
+                           <option value="11">December</option>
+                       </select>
+
+                       <label for="statement-year">Year:</label>
+                       <input type="number" id="statement-year" placeholder="YYYY" min="2000" max="2100">
+
+                       <button type="button" id="generate-statement-btn" class="btn-primary">
+                           <i class="fas fa-file-alt"></i> Generate Statement
+                       </button>
+                       <button type="button" id="clear-statement-btn" class="btn-secondary">
+                            <i class="fas fa-times-circle"></i> Clear
+                       </button>
+                  </div>
+                  <div id="monthly-statement-output" style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                      </div>
+              </div>
 
         </div>
     </main>
 
-    <button id="add-transaction-fab" class="fab"><i class="fas fa-plus-circle"></i></button>
+    <button id="add-transaction-fab" class="fab"><i class="fas fa-plus"></i></button>
 
     <div id="transaction-modal" class="modal">
         <div class="modal-content">
@@ -163,7 +214,7 @@
             <span>Report</span>
         </button>
         <button class="bottom-nav-btn" id="bottom-nav-add-btn">
-            <i class="fas fa-plus-circle"></i>
+            <i class="fas fa-plus"></i>
             <span>Add</span>
         </button>
         <button class="bottom-nav-btn" id="bottom-nav-categories-btn">

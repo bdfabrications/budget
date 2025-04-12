@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income/Expense Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css"> </head>
+<body data-theme="light"> <div id="printable-report" class="card"> <h1>Income and Expense Report</h1>
+        <p>Generated on: <span id="report-generated-date"></span></p>
+        <p>Reporting Period: <span id="report-period-display">All Time</span></p>
+
+        <section class="report-section report-summary card">
+            <h3>Summary</h3>
+            <p>Total Income (Operating): <span id="report-total-income" class="text-income">0.00</span></p>
+            <p>Total Expenses (Operating): <span id="report-total-expenses" class="text-expense">0.00</span></p>
+            <p>Net Balance (Operating): <span id="report-net-balance">0.00</span></p>
+            <hr style="border-top: 1px dashed var(--border-color); margin: 0.75rem 0;">
+            <p>Total Savings Deposits: <span id="report-savings-deposits" class="text-savings">0.00</span></p>
+            <p>Total Savings Withdrawals: <span id="report-savings-withdrawals" class="text-savings">0.00</span></p>
+            <p>Net Savings Change: <span id="report-net-savings" class="text-savings">0.00</span></p>
+        </section>
+
+        <section class="report-section card">
+             <h3>Category Breakdown & Charts</h3>
+             <div style="display: flex; flex-wrap: wrap; gap: 2rem; margin-bottom: 1.5rem;"> <div style="flex: 1; min-width: 250px;">
+                     <h4>Income by Category</h4>
+                     <table id="income-category-table" class="report-table category-breakdown">
+                         <thead>
+                             <tr>
+                                 <th>Category</th>
+                                 <th class="amount">Total</th>
+                                 <th class="percentage">% of Income</th>
+                             </tr>
+                         </thead>
+                         <tbody></tbody>
+                     </table>
+                      <p id="no-income-categories-message" class="info-message" style="display: none;">No income categories.</p>
+                 </div>
+                 <div style="flex: 1; min-width: 250px;">
+                     <h4>Expenses by Category</h4>
+                     <table id="expense-category-table" class="report-table category-breakdown">
+                         <thead>
+                             <tr>
+                                 <th>Category</th>
+                                 <th class="amount">Total</th>
+                                 <th class="percentage">% of Expenses</th>
+                             </tr>
+                         </thead>
+                         <tbody></tbody>
+                     </table>
+                      <p id="no-expense-categories-message" class="info-message" style="display: none;">No expense categories.</p>
+                 </div>
+             </div>
+             <div class="charts-container" style="display: flex; flex-wrap: wrap; gap: 1rem;">
+                 <div class="chart-container" style="flex: 1; min-width: 300px;">
+                     <h4 style="text-align: center;">Expense Breakdown</h4> <canvas id="report-expense-chart"></canvas>
+                     <p id="report-no-expense-data" class="info-message no-data-message" style="display: none;">No expense data for chart.</p>
+                 </div>
+                 <div id="report-savings-chart-container" class="chart-container" style="flex: 1; min-width: 300px;">
+                    <h4 style="text-align: center;">Savings Trend</h4> <canvas id="report-savings-chart"></canvas>
+                    <p id="report-no-savings-data" class="info-message no-data-message" style="display: none;">No savings data for chart.</p>
+                </div>
+             </div>
+        </section>
+
+        <section class="report-section card">
+            <h3>Transaction Details</h3>
+            <table id="transaction-details-table" class="report-table">
+                <thead>
+                    <tr>
+                        <th class="date-col">Date (MM/DD)</th>
+                        <th class="type-col">Type</th>
+                        <th class="desc-col">Description</th>
+                        <th class="cat-col">Category</th>
+                        <th class="amount amount-col">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                     </tbody>
+            </table>
+             <p id="no-transactions-message" class="info-message" style="display: none;">No transactions found for this period.</p>
+        </section>
+
+    </div>
+
+    <script src="report-script.js"></script>
+</body>
+</html>

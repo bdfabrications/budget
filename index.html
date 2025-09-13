@@ -14,24 +14,33 @@
 <body>
     <header>
         <div class="header-container">
-            <h1><i class="fas fa-wallet"></i> Tracker</h1>
-            <nav>
-                <button class="nav-btn active" data-view="view-transactions"><i class="fas fa-list-ul"></i> Transactions</button>
-                <button class="nav-btn" data-view="view-report"><i class="fas fa-chart-pie"></i> Report</button>
-                <button id="manage-categories-nav-btn"><i class="fas fa-tags"></i> Categories</button>
-            </nav>
-            <div class="header-actions">
-                 <button id="save-data-btn" class="btn-secondary" title="Save data to JSON file"><i class="fas fa-save"></i> Save</button>
-                 <button id="load-data-btn" class="btn-secondary" title="Load data from JSON file"><i class="fas fa-folder-open"></i> Load</button>
-                 <input type="file" id="load-file-input" accept=".json" style="display: none;">
+            <!-- Top row: Logo and theme switcher -->
+            <div class="header-top-row">
+                <h1><i class="fas fa-wallet"></i> Tracker</h1>
+                <div class="theme-switcher">
+                     <label class="switch">
+                        <input type="checkbox" id="theme-toggle-checkbox">
+                        <span class="slider round"></span>
+                    </label>
+                    <i class="fas fa-moon theme-icon moon-icon"></i>
+                    <i class="fas fa-sun theme-icon sun-icon"></i>
+                </div>
             </div>
-            <div class="theme-switcher">
-                 <label class="switch">
-                    <input type="checkbox" id="theme-toggle-checkbox">
-                    <span class="slider round"></span>
-                </label>
-                <i class="fas fa-moon theme-icon moon-icon"></i>
-                <i class="fas fa-sun theme-icon sun-icon"></i>
+            <!-- Bottom row: Navigation and actions -->
+            <div class="header-bottom-row">
+                <nav>
+                    <button class="nav-btn active" data-view="view-transactions"><i class="fas fa-list-ul"></i> Transactions</button>
+                    <button class="nav-btn" data-view="view-report"><i class="fas fa-chart-pie"></i> Report</button>
+                    <button id="manage-categories-nav-btn"><i class="fas fa-tags"></i> Categories</button>
+                </nav>
+                <div class="header-actions">
+                     <button id="save-data-btn" class="btn-secondary" title="Save data to JSON file"><i class="fas fa-save"></i><span> Save</span></button>
+                     <button id="load-data-btn" class="btn-secondary" title="Load data from JSON file"><i class="fas fa-folder-open"></i><span> Load</span></button>
+                     <button id="import-csv-btn" class="btn-secondary" title="Import transactions from CSV file(s)"><i class="fas fa-file-csv"></i><span> Import CSV</span></button>
+                     <button id="smart-categorize-btn" class="btn-primary" title="Automatically categorize transactions based on descriptions"><i class="fas fa-magic"></i><span> Smart Categorize</span></button>
+                     <input type="file" id="load-file-input" accept=".json" style="display: none;">
+                     <input type="file" id="csv-file-input" accept=".csv,.CSV" multiple style="display: none;">
+                </div>
             </div>
         </div>
     </header>
@@ -42,7 +51,7 @@
 
             <div class="filter-search-bar">
                  <i class="fas fa-search"></i>
-                <input type="text" id="search-input" placeholder="Search description, category, date, or amount...">
+                <input type="text" id="search-input" placeholder="Search description, category, date, or amount... (Press / to focus)">
                  <select id="filter-type">
                      <option value="all">All Types</option>
                      <option value="income">Income Only</option>
@@ -199,6 +208,46 @@
                      <input type="text" id="new-expense-category" placeholder="New Expense Category">
                      <button type="button" id="add-expense-category-btn" class="btn-secondary"><i class="fas fa-plus"></i> Add</button>
                  </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="csv-mapping-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <button class="close-modal-btn">&times;</button>
+            <h2><i class="fas fa-file-csv"></i> Map CSV Columns</h2>
+            <div id="csv-mapping-container">
+                <div id="column-mapping-section">
+                    <h3>Column Mapping</h3>
+                    <p>Map your CSV columns to the application fields:</p>
+                    <div id="column-mapping-list">
+                        <!-- Column mapping rows will be dynamically generated here -->
+                    </div>
+                </div>
+                
+                <div id="data-preview-section">
+                    <h3>Data Preview</h3>
+                    <p>Preview of how your data will be imported:</p>
+                    <div id="csv-preview-container">
+                        <table id="csv-preview-table">
+                            <thead id="csv-preview-header">
+                                <!-- Preview header will be generated here -->
+                            </thead>
+                            <tbody id="csv-preview-body">
+                                <!-- Preview rows will be generated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="csv-import-actions">
+                    <button type="button" id="import-transactions-btn" class="btn-primary">
+                        <i class="fas fa-upload"></i> Import Transactions
+                    </button>
+                    <button type="button" id="cancel-csv-import-btn" class="btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
             </div>
         </div>
     </div>

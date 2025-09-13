@@ -16,6 +16,10 @@ document.addEventListener("DOMContentLoaded", () => {
             "Transport",
             "Entertainment",
             "Dining Out",
+            "Shopping",
+            "Medical",
+            "Travel",
+            "Subscriptions",
             "Savings Deposit",
             "Other Expense",
         ],
@@ -27,9 +31,16 @@ document.addEventListener("DOMContentLoaded", () => {
     let expenseChart = null;
     let savingsChart = null;
 
+    // CSV Import State
+    let csvData = [];
+    let csvHeaders = [];
+    let columnMappings = {};
+    let csvFiles = [];
+    let currentFileIndex = 0;
+
     // --- DOM Elements ---
     const views = document.querySelectorAll(".view");
-    const navButtons = document.querySelectorAll("header nav .nav-btn");
+    const navButtons = document.querySelectorAll(".nav-btn[data-view]");
     const transactionList = document.getElementById("transaction-list");
     const noTransactionsMessage = document.getElementById(
         "no-transactions-message",
@@ -117,6 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Filtering Elements
     const searchInput = document.getElementById("search-input");
     const filterTypeSelect = document.getElementById("filter-type");
+    const searchBar = document.querySelector(".filter-search-bar");
 
     // Theme Toggle Elements
     const themeToggle = document.getElementById("theme-toggle-checkbox");
@@ -125,6 +137,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const saveDataBtn = document.getElementById("save-data-btn");
     const loadDataBtn = document.getElementById("load-data-btn");
     const loadFileInput = document.getElementById("load-file-input");
+    const smartCategorizeBtn = document.getElementById("smart-categorize-btn");
+
+    // CSV Import Elements
+    const importCsvBtn = document.getElementById("import-csv-btn");
+    const csvFileInput = document.getElementById("csv-file-input");
+    const csvMappingModal = document.getElementById("csv-mapping-modal");
+    const columnMappingList = document.getElementById("column-mapping-list");
+    const csvPreviewTable = document.getElementById("csv-preview-table");
+    const csvPreviewHeader = document.getElementById("csv-preview-header");
+    const csvPreviewBody = document.getElementById("csv-preview-body");
+    const importTransactionsBtn = document.getElementById("import-transactions-btn");
+    const cancelCsvImportBtn = document.getElementById("cancel-csv-import-btn");
 
     // Bottom Navigation Elements
     const bottomNav = document.getElementById("bottom-nav");
@@ -447,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 li.innerHTML = `
                      <div class="transaction-details">
                          <span class="transaction-description">${t.description}</span>
-                         <span class="transaction-category"><i class="fas fa-tag"></i> ${t.category}</span>
+                         <span class="transaction-category" data-transaction-id="${t.id}" data-current-category="${t.category}"><i class="fas fa-tag"></i> ${t.category}</span>
                          <span class="transaction-date"><i class="fas fa-calendar-alt"></i> ${formatDate(t.date, "MM/DD/YY")}</span>
                      </div>
                      <div class="transaction-amount ${amountClass}">
@@ -471,13 +495,127 @@ document.addEventListener("DOMContentLoaded", () => {
         renderTransactionList(); // Re-render the list with new filters
     };
 
+    // --- Inline Category Editing ---
+    const handleCategoryTagClick = (categoryTag) => {
+        // Check if there's already a dropdown being edited
+        const existingDropdown = document.querySelector('.category-edit-dropdown');
+        if (existingDropdown) {
+            // Close existing dropdown first
+            existingDropdown.blur();
+            return;
+        }
+        
+        const transactionId = parseInt(categoryTag.dataset.transactionId);
+        const currentCategory = categoryTag.dataset.currentCategory;
+        const transaction = transactions.find(t => t.id === transactionId);
+        
+        if (!transaction) return;
+        
+        // Get available categories for this transaction type
+        const availableCategories = categories[transaction.type] || [];
+        
+        // Create dropdown
+        const dropdown = document.createElement('select');
+        dropdown.className = 'category-edit-dropdown';
+        
+        // Populate dropdown
+        availableCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            option.selected = cat === currentCategory;
+            dropdown.appendChild(option);
+        });
+        
+        // Replace category tag with dropdown
+        const originalContent = categoryTag.innerHTML;
+        categoryTag.innerHTML = '';
+        categoryTag.appendChild(dropdown);
+        categoryTag.style.padding = '2px';
+        
+        let isCompleted = false;
+        
+        // Handle dropdown change and completion
+        const completeEdit = (save = true) => {
+            if (isCompleted) return;
+            isCompleted = true;
+            
+            if (save) {
+                const newCategory = dropdown.value;
+                if (newCategory !== currentCategory) {
+                    // Update transaction
+                    transaction.category = newCategory;
+                    saveData();
+                    renderTransactions();
+                    return; // renderTransactions will recreate the element
+                }
+            }
+            
+            // Restore original content
+            categoryTag.innerHTML = originalContent;
+            categoryTag.style.padding = '';
+            categoryTag.dataset.currentCategory = transaction.category;
+        };
+        
+        // Event listeners
+        dropdown.addEventListener('change', () => {
+            completeEdit(true);
+        });
+        
+        dropdown.addEventListener('blur', (e) => {
+            // Use setTimeout to allow click events to process first
+            setTimeout(() => {
+                if (!isCompleted) {
+                    completeEdit(true);
+                }
+            }, 100);
+        });
+        
+        dropdown.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                completeEdit(false);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                completeEdit(true);
+            }
+        });
+        
+        // Prevent events from bubbling up 
+        dropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        
+        dropdown.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+        });
+        
+        // Set the dropdown to show all options immediately
+        dropdown.size = Math.min(availableCategories.length, 6); // Show up to 6 options
+        
+        // Focus the dropdown
+        setTimeout(() => {
+            dropdown.focus();
+        }, 0);
+    };
+
     // --- Editing Logic ---
     // Handles clicks within the transaction list for edit/delete buttons
     const handleTransactionListClick = (e) => {
+        // Don't handle if clicking on an active dropdown
+        if (e.target.closest('.category-edit-dropdown')) {
+            return;
+        }
+        
         const editButton = e.target.closest(".edit-btn");
         const deleteButton = e.target.closest(".delete-btn");
+        const categoryTag = e.target.closest(".transaction-category");
 
-        if (editButton) {
+        if (categoryTag) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleCategoryTagClick(categoryTag);
+        } else if (editButton) {
             const card = editButton.closest(".transaction-card");
             const id = parseInt(card.dataset.id);
             const transactionToEdit = transactions.find((t) => t.id === id);
@@ -1208,11 +1346,948 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.readAsText(file); // Read the file content
     };
 
+    // --- CSV Import Functions ---
+    const parseCSV = (csvText) => {
+        const lines = csvText.split('\n').filter(line => line.trim() !== '');
+        if (lines.length === 0) return { headers: [], data: [] };
+        
+        const parseCSVLine = (line) => {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                const nextChar = line[i + 1];
+                
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current.trim());
+            return result;
+        };
+        
+        const headers = parseCSVLine(lines[0]);
+        const data = lines.slice(1).map(line => parseCSVLine(line));
+        
+        return { headers, data };
+    };
+
+    const handleCsvFileSelect = (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+
+        // Validate all files are CSV files (case-insensitive)
+        const invalidFiles = files.filter(file => {
+            const fileName = file.name.toLowerCase();
+            return !fileName.endsWith('.csv');
+        });
+
+        if (invalidFiles.length > 0) {
+            alert(`Invalid file type(s). Please select only .csv files.\nInvalid files: ${invalidFiles.map(f => f.name).join(', ')}`);
+            csvFileInput.value = '';
+            return;
+        }
+
+        csvFiles = files;
+        currentFileIndex = 0;
+        
+        const fileCountText = files.length > 1 ? ` (${files.length} files selected)` : '';
+        
+        if (files.length > 1) {
+            const confirmMessage = `You've selected ${files.length} CSV files. They will be processed sequentially. Continue?`;
+            if (!confirm(confirmMessage)) {
+                csvFileInput.value = '';
+                return;
+            }
+        }
+
+        processCurrentFile();
+    };
+
+    const processCurrentFile = () => {
+        if (currentFileIndex >= csvFiles.length) {
+            // All files processed
+            csvFiles = [];
+            currentFileIndex = 0;
+            csvFileInput.value = '';
+            return;
+        }
+
+        const file = csvFiles[currentFileIndex];
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            try {
+                const csvText = e.target.result;
+                const parsed = parseCSV(csvText);
+                
+                if (parsed.headers.length === 0) {
+                    alert(`The CSV file "${file.name}" appears to be empty or invalid. Skipping this file.`);
+                    currentFileIndex++;
+                    processCurrentFile();
+                    return;
+                }
+                
+                csvHeaders = parsed.headers;
+                csvData = parsed.data;
+                
+                initializeColumnMappings();
+                renderColumnMappings();
+                renderDataPreview();
+                updateModalTitle();
+                openModal(csvMappingModal);
+                
+            } catch (error) {
+                console.error('Error parsing CSV:', error);
+                alert(`Error reading CSV file "${file.name}". Please ensure it's a valid CSV format. Skipping this file.`);
+                currentFileIndex++;
+                processCurrentFile();
+            }
+        };
+        
+        reader.onerror = () => {
+            alert(`Error reading file "${file.name}". Skipping this file.`);
+            currentFileIndex++;
+            processCurrentFile();
+        };
+        
+        reader.readAsText(file);
+    };
+
+    const updateModalTitle = () => {
+        const modalTitle = csvMappingModal.querySelector('h2');
+        if (csvFiles.length > 1) {
+            const fileName = csvFiles[currentFileIndex].name;
+            modalTitle.innerHTML = `<i class="fas fa-file-csv"></i> Map CSV Columns - ${fileName} (${currentFileIndex + 1} of ${csvFiles.length})`;
+        } else {
+            modalTitle.innerHTML = `<i class="fas fa-file-csv"></i> Map CSV Columns`;
+        }
+    };
+
+    // Auto-categorization system
+    const categoryKeywords = {
+        income: {
+            'Salary': [
+                'salary', 'payroll', 'wages', 'pay', 'income', 'employment',
+                'employer', 'work', 'job', 'paycheck', 'biweekly', 'monthly pay',
+                'fedwire', 'wire transfer', 'direct deposit', 'deposit', 'ach',
+                'automatic deposit', 'electronic deposit', 'bank transfer'
+            ],
+            'Freelance': [
+                'freelance', 'consulting', 'contract', 'gig', 'project',
+                'client', 'invoice', 'hourly', 'commission', 'self employed'
+            ],
+            'Gift': [
+                'gift', 'present', 'birthday', 'holiday', 'christmas',
+                'wedding', 'bonus', 'tip', 'gratuity', 'cash gift'
+            ],
+            'Savings Withdrawal': [
+                'savings withdrawal', 'withdrawal', 'atm withdrawal',
+                'cash withdrawal', 'bank withdrawal', 'transfer from savings'
+            ],
+            'Other Income': [
+                'interest', 'dividend', 'refund', 'rebate', 'cashback',
+                'return', 'reimbursement', 'tax refund', 'insurance claim',
+                'rental income', 'investment', 'profit', 'earnings'
+            ]
+        },
+        expense: {
+            'Groceries': [
+                'grocery', 'groceries', 'supermarket', 'food', 'walmart', 'target',
+                'kroger', 'safeway', 'publix', 'whole foods', 'costco', 'sams club',
+                'market', 'produce', 'meat', 'dairy', 'bakery', 'deli', 'heb', 'h-e-b',
+                'aldi', 'food lion', 'giant', 'meijer', 'wegmans', 'fresh market'
+            ],
+            'Rent/Mortgage': [
+                'rent', 'mortgage', 'housing', 'apartment', 'landlord',
+                'property management', 'housing payment', 'monthly rent'
+            ],
+            'Utilities': [
+                'electric', 'electricity', 'gas', 'water', 'sewer', 'trash',
+                'internet', 'cable', 'phone', 'cell phone', 'mobile',
+                'utility', 'utilities', 'power', 'energy', 'heating',
+                'cooling', 'wifi', 'broadband', 'telecom'
+            ],
+            'Transport': [
+                'gas', 'gasoline', 'fuel', 'car', 'auto', 'vehicle',
+                'uber', 'lyft', 'taxi', 'bus', 'train', 'subway',
+                'parking', 'toll', 'car payment', 'insurance',
+                'maintenance', 'repair', 'oil change', 'tire',
+                'shell', 'exxon', 'mobil', 'chevron', 'bp', 'valero',
+                'citgo', 'sunoco', 'marathon', 'phillips 66',
+                'conoco', 'speedway', 'wawa', '7-eleven', 'circle k',
+                'gas station', 'fuel stop', 'truck stop'
+            ],
+            'Entertainment': [
+                'movie', 'cinema', 'theater', 'concert', 'music',
+                'game', 'gaming', 'netflix', 'spotify', 'streaming',
+                'entertainment', 'fun', 'hobby', 'sports', 'tickets',
+                'amusement', 'recreation', 'subscription', 'steam',
+                'steamgames', 'xbox', 'playstation', 'nintendo', 'twitch',
+                'youtube premium', 'disney plus', 'hulu', 'paramount'
+            ],
+            'Dining Out': [
+                'restaurant', 'dining', 'food', 'lunch', 'dinner',
+                'breakfast', 'cafe', 'coffee', 'starbucks', 'mcdonald',
+                'pizza', 'takeout', 'delivery', 'fast food', 'bar',
+                'pub', 'bistro', 'diner', 'eatery', 'burger', 'chicken',
+                'whataburger', 'subway', 'taco', 'kfc', 'wendys', 'arbys',
+                'chipotle', 'panda express', 'five guys', 'in-n-out',
+                'sonic', 'dairy queen', 'jack in the box', 'chick-fil-a',
+                'popeyes', 'papa johns', 'dominos', 'pizza hut',
+                'applebees', 'chilis', 'olive garden', 'outback',
+                'red lobster', 'texas roadhouse', 'cracker barrel',
+                'ihop', 'dennys', 'waffle house', 'panera', 'qdoba',
+                'buffalo wild wings', 'jimmy johns', 'raising canes',
+                'bill miller', 'wings', 'bbq', 'grill', 'wings'
+            ],
+            'Savings Deposit': [
+                'savings deposit', 'deposit', 'transfer to savings',
+                'save', 'saving', 'emergency fund'
+            ],
+            'Other Expense': [
+                'shopping', 'purchase', 'buy', 'store', 'retail',
+                'online', 'clothes', 'clothing', 'shoes',
+                'insurance', 'fee', 'charge', 'service', 'subscription',
+                'openai', 'chatgpt', 'microsoft', 'adobe', 'google',
+                'apple', 'dropbox', 'zoom', 'slack', 'github',
+                'paypal', 'square', 'stripe', 'quickbooks',
+                'overdraft', 'overdraft fee', 'nsf', 'insufficient funds',
+                'bank fee', 'maintenance fee', 'monthly fee', 'annual fee',
+                'late fee', 'penalty', 'interest charge', 'finance charge',
+                'hotel', 'motel', 'inn', 'lodge', 'resort', 'travel',
+                'booking', 'reservation', 'expedia', 'hotels.com',
+                'hampton', 'hilton', 'marriott', 'hyatt', 'holiday inn',
+                'fairfield', 'license', 'registration', 'government',
+                'wire fee', 'domestic', 'international', 'transfer fee'
+            ]
+        }
+    };
+
+    const autoCategorizeTransaction = (description, type) => {
+        if (!description || !type) return null;
+        
+        const descLower = description.toLowerCase().trim();
+        const availableCategories = categories[type] || [];
+        
+        // Check each category's keywords
+        for (const category of availableCategories) {
+            const keywords = categoryKeywords[type]?.[category] || [];
+            
+            // Check if any keyword matches the description
+            for (const keyword of keywords) {
+                if (descLower.includes(keyword.toLowerCase())) {
+                    return category;
+                }
+            }
+        }
+        
+        // SUPER AGGRESSIVE pattern-based categorization 
+        if (type === 'expense') {
+            // DINING OUT - Be extremely aggressive with food detection
+            if (descLower.match(/(\bwhataburger\b|\bmcdonald|\bburger\b|\bwendys\b|\bsubway\b|\btaco\b|\bkfc\b|\bpopeyes\b|\bchick\b|\bchicken\b)/)) return 'Dining Out';
+            if (descLower.match(/(\bpizza\b|\bdomino|\bpapa\b|\bjimmy\b|\braising\b|\bcanes\b|\bwings\b|\bbuffalo\b|\bsonic\b|\bdairy queen\b)/)) return 'Dining Out';
+            if (descLower.match(/(\bstarbucks\b|\bdunkin\b|\bcoffee\b|\bcafe\b|\bpanera\b|\bchipotle\b|\brestaurant\b|\bdining\b)/)) return 'Dining Out';
+            if (descLower.match(/(\bapplebees\b|\bchilis\b|\bolive garden\b|\bred lobster\b|\btexas roadhouse\b|\boutback\b|\bihop\b|\bdennys\b)/)) return 'Dining Out';
+            if (descLower.match(/(\bbill miller\b|\bbigs\b|\bfood\b|\bbbq\b|\bgrill\b|\bbar\b|\bdiner\b|\beatery\b)/)) return 'Dining Out';
+            
+            // GROCERIES - Be aggressive with grocery detection  
+            if (descLower.match(/(\bheb\b|\bh-e-b\b|\bwalmart\b|\btarget\b|\bkroger\b|\bcostco\b|\bsams club\b|\baldi\b)/)) return 'Groceries';
+            if (descLower.match(/(\bgrocery\b|\bsupermarket\b|\bmarket\b|\bfood\b.*\bstore\b|\bproduce\b)/)) return 'Groceries';
+            
+            // TRANSPORT - Aggressive gas/auto detection
+            if (descLower.match(/(\bshell\b|\bexxon\b|\bmobil\b|\bchevron\b|\bbp\b|\bvalero\b|\bcitgo\b|\bmarathon\b|\bgas\b|\bfuel\b)/)) return 'Transport';
+            if (descLower.match(/(\bspeedway\b|\bquiktrip\b|\bphillips 66\b|\bconoco\b|\bsunoco\b|\b7.eleven\b|\bcircle k\b|\bwawa\b)/)) return 'Transport';
+            if (descLower.match(/(\bzapco\b|\bautomotive\b|\bcar\b.*\bservice\b|\bauto\b|\bmechanic\b|\brepair\b)/)) return 'Transport';
+            
+            // ENTERTAINMENT - Gaming and streaming
+            if (descLower.match(/(\bsteam\b|\bsteamgames\b|\bgaming\b|\bxbox\b|\bplaystation\b|\bnintendo\b)/)) return 'Entertainment';
+            if (descLower.match(/(\bnetflix\b|\bspotify\b|\bhulu\b|\bdisney\b|\byoutube\b|\bapple music\b|\bstreaming\b)/)) return 'Entertainment';
+            if (descLower.match(/(\bamc\b|\bregal\b|\bcinemark\b|\btheater\b|\bcinema\b|\bmovie\b|\btickets\b)/)) return 'Entertainment';
+            
+            // UTILITIES - Phone, internet, power
+            if (descLower.match(/(\bcomcast\b|\bverizon\b|\bat&t\b|\bspectrum\b|\btime warner\b|\bcox\b|\boptimum\b)/)) return 'Utilities';
+            if (descLower.match(/(\belectric\b|\bpower\b|\benergy\b|\bwater\b|\bsewer\b|\binternet\b|\bphone\b|\bwireless\b)/)) return 'Utilities';
+            
+            // OTHER EXPENSE - Everything else (be more selective)
+            if (descLower.match(/(\bamazon\b|\bapple\.com\b|\bgoogle\b|\bmicrosoft\b|\badobe\b|\bopenai\b)/)) return 'Other Expense';
+            if (descLower.match(/(\bhotel\b|\binn\b|\bmotel\b|\bhampton\b|\bhilton\b|\bmarriott\b|\bfairfield\b)/)) return 'Other Expense';
+            if (descLower.match(/(\bcvs\b|\bpharmacy\b|\bcerebral\b|\bhealth\b|\bmedical\b)/)) return 'Other Expense';
+            if (descLower.match(/(\boverdraft\b|\bfee\b|\bcharge\b|\blicense\b|\bregistration\b|\bdomestic\b)/)) return 'Other Expense';
+            if (descLower.match(/(\bzoom\b|\bslack\b|\bgithub\b|\bpaypal\b|\bsubscription\b|\bservice\b)/)) return 'Other Expense';
+            
+        } else if (type === 'income') {
+            // Income patterns (enhanced with aggressive salary detection)
+            if (descLower.match(/(\bpayroll\b|\bsalary\b|\bwages\b|\bemployer\b|\bdirect deposit\b|\bpay\b.*\bdeposit\b)/)) return 'Salary';
+            if (descLower.match(/(\bfedwire\b|\bwire transfer\b|\bcredit via\b|\bach credit\b|\bdeposit\b.*\bbank\b)/)) return 'Salary';
+            if (descLower.match(/(\bmechanical\b|\bconstruction\b|\bcorp\b|\bcompany\b|\bco\b|\binc\b|\bllc\b)/)) return 'Salary';
+            if (descLower.match(/(\bfreelance\b|\bconsulting\b|\bcontract\b|\bclient\b|\binvoice\b|\bself.employed\b)/)) return 'Freelance';
+            if (descLower.match(/(\binterest\b|\bdividend\b|\binvestment\b|\brefund\b|\bcashback\b|\breturn\b)/)) return 'Other Income';
+            if (descLower.match(/(\bgift\b|\bbonus\b|\btip\b|\bpresent\b|\bgratuity\b)/)) return 'Gift';
+        }
+
+        // Comprehensive merchant name detection - BE VERY AGGRESSIVE
+        const merchantCategories = {
+            // GROCERIES - Map Amazon purchases intelligently
+            'heb': 'Groceries', 'h-e-b': 'Groceries', 'walmart': 'Groceries', 'target': 'Groceries',
+            'kroger': 'Groceries', 'costco': 'Groceries', 'sams club': 'Groceries',
+            
+            // DINING OUT - All restaurants and food places
+            'whataburger': 'Dining Out', 'mcdonalds': 'Dining Out', 'mcdonald': 'Dining Out',
+            'burger king': 'Dining Out', 'wendys': 'Dining Out', 'subway': 'Dining Out',
+            'taco bell': 'Dining Out', 'kfc': 'Dining Out', 'popeyes': 'Dining Out',
+            'chick-fil-a': 'Dining Out', 'chickfila': 'Dining Out', 'chick fil a': 'Dining Out',
+            'chicken express': 'Dining Out', 'sonic': 'Dining Out', 'dairy queen': 'Dining Out',
+            'jack in the box': 'Dining Out', 'jack in box': 'Dining Out', 'arbys': 'Dining Out', 
+            'five guys': 'Dining Out', 'chipotle': 'Dining Out', 'panda express': 'Dining Out', 
+            'qdoba': 'Dining Out', 'pizza hut': 'Dining Out', 'dominos': 'Dining Out', 
+            'domino': 'Dining Out', 'papa johns': 'Dining Out', 'little caesars': 'Dining Out', 
+            'starbucks': 'Dining Out', 'dunkin': 'Dining Out', 'panera': 'Dining Out', 
+            'applebees': 'Dining Out', 'chilis': 'Dining Out', 'olive garden': 'Dining Out', 
+            'red lobster': 'Dining Out', 'outback': 'Dining Out', 'texas roadhouse': 'Dining Out', 
+            'cracker barrel': 'Dining Out', 'ihop': 'Dining Out', 'dennys': 'Dining Out', 
+            'waffle house': 'Dining Out', 'buffalo wild wings': 'Dining Out', 'buffalo wild': 'Dining Out',
+            'jimmy johns': 'Dining Out', 'jimmy john': 'Dining Out', 'raising canes': 'Dining Out',
+            'raising cane': 'Dining Out', 'bill miller': 'Dining Out', 'wings': 'Dining Out',
+            'bbq': 'Dining Out', 'grill': 'Dining Out', 'bigs': 'Dining Out',
+            
+            // TRANSPORT - Gas stations and automotive 
+            'shell': 'Transport', 'exxon': 'Transport', 'mobil': 'Transport',
+            'chevron': 'Transport', 'bp': 'Transport', 'valero': 'Transport',
+            'citgo': 'Transport', 'marathon': 'Transport', 'phillips 66': 'Transport',
+            'conoco': 'Transport', 'sunoco': 'Transport', 'speedway': 'Transport',
+            'circle k': 'Transport', 'wawa': 'Transport', '7-eleven': 'Transport',
+            'quiktrip': 'Transport', 'casey': 'Transport', 'racetrac': 'Transport',
+            'zapco': 'Transport', 'automotive': 'Transport', 'car service': 'Transport',
+            
+            // ENTERTAINMENT - Gaming, streaming, fun
+            'netflix': 'Entertainment', 'spotify': 'Entertainment', 'hulu': 'Entertainment',
+            'disney': 'Entertainment', 'amazon prime': 'Entertainment', 'youtube': 'Entertainment',
+            'apple music': 'Entertainment', 'amc': 'Entertainment', 'regal': 'Entertainment',
+            'cinemark': 'Entertainment', 'marcus': 'Entertainment', 'steam': 'Entertainment',
+            'steamgames': 'Entertainment', 'xbox': 'Entertainment', 'playstation': 'Entertainment',
+            
+            // UTILITIES - Phone, internet, power
+            'comcast': 'Utilities', 'verizon': 'Utilities', 'att': 'Utilities',
+            'spectrum': 'Utilities', 'cox': 'Utilities', 'optimum': 'Utilities',
+            'time warner': 'Utilities', 'xfinity': 'Utilities', 'frontier': 'Utilities',
+            
+            // OTHER EXPENSE - Everything else that doesn't fit cleanly
+            'amazon': 'Other Expense', 'openai': 'Other Expense', 'microsoft': 'Other Expense', 
+            'adobe': 'Other Expense', 'google': 'Other Expense', 'apple': 'Other Expense', 
+            'dropbox': 'Other Expense', 'zoom': 'Other Expense', 'slack': 'Other Expense', 
+            'github': 'Other Expense', 'quickbooks': 'Other Expense', 'paypal': 'Other Expense', 
+            'tst': 'Other Expense', 'hampton inn': 'Other Expense', 'hampton': 'Other Expense', 
+            'hilton': 'Other Expense', 'marriott': 'Other Expense', 'hyatt': 'Other Expense', 
+            'holiday inn': 'Other Expense', 'fairfield': 'Other Expense', 'best western': 'Other Expense', 
+            'motel': 'Other Expense', 'hotel': 'Other Expense', 'overdraft': 'Other Expense', 
+            'nsf': 'Other Expense', 'fee': 'Other Expense', 'paddle': 'Other Expense', 
+            'nexusmods': 'Other Expense', 'cerebral': 'Other Expense', 'cvs': 'Other Expense',
+            'pharmacy': 'Other Expense', 'license': 'Other Expense', 'domestic': 'Other Expense'
+        };
+        
+        // First try exact merchant matching
+        for (const [merchant, category] of Object.entries(merchantCategories)) {
+            if (descLower.includes(merchant) && availableCategories.includes(category)) {
+                return category;
+            }
+        }
+        
+        // Special handling for transaction descriptions with location/ID codes
+        // Handle patterns like "CHICKEN EXPRESS CLEAR 830-6292750 TX 08/27"
+        if (type === 'expense') {
+            // Extract the business name from complex transaction descriptions
+            const businessNamePatterns = [
+                // Handle "DOMINO'S 9272 512-494-5463 TX 09/09" pattern
+                /^([a-zA-Z\s'&]+?)\s+\d{4}\s+[\d\-]+/i,
+                // Handle "HAMPTON INNS AUSTIN TX 09/09" pattern  
+                /^([a-zA-Z\s&]+?)\s+(?:austin|houston|dallas|san antonio|new braunfels|clear|tx|ca|fl|ny|il)\s/i,
+                // Handle "GOOGLE *Google One g.co/helppay# CA 09/08" pattern
+                /^([a-zA-Z\s\*]+?)\s+[a-z\.\/]+/i,
+                // Original patterns
+                /^([a-zA-Z\s&]+?)\s+(?:clear|austin|houston|dallas|san antonio|new braunfels|tx|ca|fl|ny|il)/i,
+                /^([a-zA-Z\s&]+?)\s+\d{3,}/i, // Business name followed by numbers
+                /^([a-zA-Z\s&]+?)\s+[a-z]{2}\s+\d{2}\/\d{2}/i, // Business name + state + date
+            ];
+            
+            for (const pattern of businessNamePatterns) {
+                const match = description.match(pattern);
+                if (match) {
+                    const businessName = match[1].toLowerCase().trim();
+                    
+                    // Check if the extracted business name matches our categories
+                    for (const [merchant, category] of Object.entries(merchantCategories)) {
+                        if (businessName.includes(merchant) && availableCategories.includes(category)) {
+                            return category;
+                        }
+                    }
+                    
+                    // Check for general food/restaurant keywords in business name
+                    if (businessName.match(/\b(burger|pizza|chicken|taco|bbq|grill|cafe|restaurant|diner|bistro|bar|pub)\b/)) {
+                        return 'Dining Out';
+                    }
+                    
+                    // Check for gas/fuel keywords
+                    if (businessName.match(/\b(gas|fuel|oil|station|petroleum)\b/)) {
+                        return 'Transport';
+                    }
+                    
+                    // Check for store keywords
+                    if (businessName.match(/\b(store|shop|market|mart|center|plaza)\b/)) {
+                        return 'Other Expense';
+                    }
+                }
+            }
+        }
+        
+        // Additional fuzzy matching for partial names
+        const fuzzyMatches = {
+            'dining': ['whataburger', 'chicken', 'burger', 'pizza', 'taco', 'restaurant', 'cafe', 'coffee', 'diner'],
+            'transport': ['shell', 'exxon', 'mobil', 'gas', 'fuel', 'oil', 'station'],
+            'utilities': ['electric', 'power', 'energy', 'water', 'internet', 'phone', 'wireless', 'cable'],
+            'groceries': ['market', 'grocery', 'food', 'supermarket'],
+        };
+        
+        for (const [categoryType, keywords] of Object.entries(fuzzyMatches)) {
+            for (const keyword of keywords) {
+                if (descLower.includes(keyword)) {
+                    switch(categoryType) {
+                        case 'dining': return availableCategories.includes('Dining Out') ? 'Dining Out' : null;
+                        case 'transport': return availableCategories.includes('Transport') ? 'Transport' : null;
+                        case 'utilities': return availableCategories.includes('Utilities') ? 'Utilities' : null;
+                        case 'groceries': return availableCategories.includes('Groceries') ? 'Groceries' : null;
+                    }
+                }
+            }
+        }
+        
+        // Fallback to default categories
+        return type === 'income' ? 'Other Income' : 'Other Expense';
+    };
+
+    const initializeColumnMappings = () => {
+        columnMappings = {};
+        csvHeaders.forEach(header => {
+            const headerLower = header.toLowerCase().trim();
+            if (headerLower.includes('date')) {
+                columnMappings[header] = 'date';
+            } else if (headerLower.includes('description') || headerLower.includes('memo') || headerLower.includes('payee')) {
+                columnMappings[header] = 'description';
+            } else if (headerLower.includes('amount') || headerLower.includes('value')) {
+                columnMappings[header] = 'amount';
+            } else if (headerLower.includes('type')) {
+                columnMappings[header] = 'type';
+            } else if (headerLower.includes('category')) {
+                columnMappings[header] = 'category';
+            } else {
+                columnMappings[header] = 'ignore';
+            }
+        });
+    };
+
+    const renderColumnMappings = () => {
+        columnMappingList.innerHTML = '';
+        
+        csvHeaders.forEach(header => {
+            const mappingRow = document.createElement('div');
+            mappingRow.className = 'mapping-row';
+            mappingRow.style.cssText = 'display: flex; align-items: center; margin-bottom: 0.5rem; gap: 1rem;';
+            
+            const headerLabel = document.createElement('label');
+            headerLabel.style.cssText = 'font-weight: bold; min-width: 150px; flex-shrink: 0;';
+            headerLabel.textContent = header + ':';
+            
+            const mappingSelect = document.createElement('select');
+            mappingSelect.className = 'mapping-select';
+            mappingSelect.style.cssText = 'flex: 1; padding: 0.25rem; border: 1px solid var(--border-color); border-radius: 4px;';
+            mappingSelect.dataset.header = header;
+            
+            const options = [
+                { value: 'ignore', text: 'Ignore' },
+                { value: 'date', text: 'Date' },
+                { value: 'description', text: 'Description' },
+                { value: 'amount', text: 'Amount' },
+                { value: 'type', text: 'Type' },
+                { value: 'category', text: 'Category' }
+            ];
+            
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.value;
+                optionElement.textContent = option.text;
+                if (columnMappings[header] === option.value) {
+                    optionElement.selected = true;
+                }
+                mappingSelect.appendChild(optionElement);
+            });
+            
+            mappingSelect.addEventListener('change', () => {
+                columnMappings[header] = mappingSelect.value;
+                renderDataPreview();
+            });
+            
+            mappingRow.appendChild(headerLabel);
+            mappingRow.appendChild(mappingSelect);
+            columnMappingList.appendChild(mappingRow);
+        });
+    };
+
+    const renderDataPreview = () => {
+        csvPreviewHeader.innerHTML = '';
+        csvPreviewBody.innerHTML = '';
+        
+        const mappedFields = ['Date', 'Description', 'Amount', 'Type', 'Category'];
+        const headerRow = document.createElement('tr');
+        
+        mappedFields.forEach(field => {
+            const th = document.createElement('th');
+            th.textContent = field;
+            th.style.cssText = 'padding: 0.5rem; border: 1px solid var(--border-color); background-color: var(--card-bg-color);';
+            headerRow.appendChild(th);
+        });
+        csvPreviewHeader.appendChild(headerRow);
+        
+        const previewRows = csvData.slice(0, 5);
+        
+        previewRows.forEach(row => {
+            const tr = document.createElement('tr');
+            
+            mappedFields.forEach(field => {
+                const td = document.createElement('td');
+                td.style.cssText = 'padding: 0.5rem; border: 1px solid var(--border-color);';
+                
+                let fieldValue = getMappedValue(row, field.toLowerCase());
+                
+                // Special handling for category preview with auto-categorization
+                if (field === 'Category') {
+                    const descriptionValue = getMappedValue(row, 'description');
+                    const typeValue = getMappedValue(row, 'type');
+                    const { type: inferredType } = processTransactionAmount(getMappedValue(row, 'amount'), typeValue);
+                    const finalType = typeValue && (typeValue.toLowerCase().includes('income') || typeValue.toLowerCase().includes('expense')) 
+                        ? (typeValue.toLowerCase().includes('income') ? 'income' : 'expense')
+                        : inferredType;
+                    
+                    if (!fieldValue || !categories[finalType].includes(fieldValue)) {
+                        const autoCategory = autoCategorizeTransaction(descriptionValue, finalType);
+                        if (autoCategory) {
+                            fieldValue = autoCategory;
+                            td.style.fontStyle = 'italic';
+                            td.style.color = 'var(--success-color)';
+                            td.title = 'Auto-categorized based on description';
+                        }
+                    }
+                }
+                
+                td.textContent = fieldValue || '';
+                
+                if (field === 'Amount' && fieldValue) {
+                    const numValue = parseFloat(fieldValue);
+                    if (!isNaN(numValue)) {
+                        td.style.color = numValue >= 0 ? 'var(--income-color)' : 'var(--expense-color)';
+                    }
+                }
+                
+                tr.appendChild(td);
+            });
+            
+            csvPreviewBody.appendChild(tr);
+        });
+    };
+
+    const getMappedValue = (row, field) => {
+        for (const [header, mapping] of Object.entries(columnMappings)) {
+            if (mapping === field) {
+                const headerIndex = csvHeaders.indexOf(header);
+                if (headerIndex !== -1 && row[headerIndex] !== undefined) {
+                    return row[headerIndex];
+                }
+            }
+        }
+        return '';
+    };
+
+    const parseDate = (dateString) => {
+        if (!dateString) return '';
+        
+        const cleanDate = dateString.trim();
+        if (!cleanDate) return '';
+        
+        const formats = [
+            /^(\d{4})-(\d{1,2})-(\d{1,2})$/,
+            /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+            /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/,
+            /^(\d{1,2})-(\d{1,2})-(\d{4})$/,
+            /^(\d{1,2})-(\d{1,2})-(\d{2})$/
+        ];
+        
+        for (const format of formats) {
+            const match = cleanDate.match(format);
+            if (match) {
+                let year, month, day;
+                
+                if (format === formats[0]) {
+                    [, year, month, day] = match;
+                } else if (format === formats[1] || format === formats[3]) {
+                    [, month, day, year] = match;
+                } else if (format === formats[2] || format === formats[4]) {
+                    [, month, day, year] = match;
+                    year = '20' + year;
+                }
+                
+                month = month.padStart(2, '0');
+                day = day.padStart(2, '0');
+                
+                const date = new Date(`${year}-${month}-${day}`);
+                if (!isNaN(date.getTime())) {
+                    return `${year}-${month}-${day}`;
+                }
+            }
+        }
+        
+        const jsDate = new Date(cleanDate);
+        if (!isNaN(jsDate.getTime())) {
+            const year = jsDate.getFullYear();
+            const month = String(jsDate.getMonth() + 1).padStart(2, '0');
+            const day = String(jsDate.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        return '';
+    };
+
+    const processTransactionAmount = (amountString, typeString) => {
+        if (!amountString) return { amount: 0, type: '' };
+        
+        const cleanAmount = amountString.replace(/[$,]/g, '').trim();
+        let amount = parseFloat(cleanAmount);
+        
+        if (isNaN(amount)) return { amount: 0, type: '' };
+        
+        amount = Math.abs(amount);
+        
+        let type = '';
+        if (typeString) {
+            const typeClean = typeString.toLowerCase().trim();
+            if (typeClean.includes('income') || typeClean.includes('credit') || typeClean.includes('deposit')) {
+                type = 'income';
+            } else if (typeClean.includes('expense') || typeClean.includes('debit') || typeClean.includes('withdrawal')) {
+                type = 'expense';
+            }
+        }
+        
+        if (!type) {
+            const originalAmount = parseFloat(amountString.replace(/[$,]/g, '').trim());
+            type = originalAmount >= 0 ? 'income' : 'expense';
+        }
+        
+        return { amount, type };
+    };
+
+    const validateTransaction = (transaction) => {
+        const errors = [];
+        
+        if (!transaction.date) {
+            errors.push('Date is required');
+        }
+        
+        if (!transaction.description || transaction.description.trim() === '') {
+            errors.push('Description is required');
+        }
+        
+        if (!transaction.amount || transaction.amount <= 0) {
+            errors.push('Amount must be greater than 0');
+        }
+        
+        if (!transaction.type || (transaction.type !== 'income' && transaction.type !== 'expense')) {
+            errors.push('Type must be either "income" or "expense"');
+        }
+        
+        if (!transaction.category || transaction.category.trim() === '') {
+            errors.push('Category is required');
+        } else {
+            const validCategories = categories[transaction.type] || [];
+            if (!validCategories.includes(transaction.category)) {
+                errors.push(`Category "${transaction.category}" is not valid for ${transaction.type}`);
+            }
+        }
+        
+        return errors;
+    };
+
+    const importCsvTransactions = () => {
+        const requiredMappings = ['date', 'description', 'amount'];
+        const mappedFields = Object.values(columnMappings);
+        
+        for (const required of requiredMappings) {
+            if (!mappedFields.includes(required)) {
+                alert(`Please map at least these required fields: Date, Description, and Amount.`);
+                return;
+            }
+        }
+        
+        const newTransactions = [];
+        const errors = [];
+        
+        csvData.forEach((row, index) => {
+            const dateValue = getMappedValue(row, 'date');
+            const descriptionValue = getMappedValue(row, 'description');
+            const amountValue = getMappedValue(row, 'amount');
+            const typeValue = getMappedValue(row, 'type');
+            const categoryValue = getMappedValue(row, 'category');
+            
+            const parsedDate = parseDate(dateValue);
+            const { amount, type: inferredType } = processTransactionAmount(amountValue, typeValue);
+            const finalType = typeValue && (typeValue.toLowerCase().includes('income') || typeValue.toLowerCase().includes('expense')) 
+                ? (typeValue.toLowerCase().includes('income') ? 'income' : 'expense')
+                : inferredType;
+            
+            let finalCategory = categoryValue;
+            
+            // Auto-categorize if no category is provided or if provided category is invalid
+            if (!finalCategory || !categories[finalType].includes(finalCategory)) {
+                finalCategory = autoCategorizeTransaction(descriptionValue, finalType);
+            }
+            
+            // Final fallback if auto-categorization fails
+            if (!finalCategory || !categories[finalType].includes(finalCategory)) {
+                finalCategory = finalType === 'income' ? 'Other Income' : 'Other Expense';
+            }
+            
+            const transaction = {
+                id: Date.now() + index,
+                date: parsedDate,
+                description: descriptionValue.trim(),
+                amount: amount,
+                type: finalType,
+                category: finalCategory
+            };
+            
+            const validationErrors = validateTransaction(transaction);
+            if (validationErrors.length > 0) {
+                errors.push(`Row ${index + 2}: ${validationErrors.join(', ')}`);
+            } else {
+                newTransactions.push(transaction);
+            }
+        });
+        
+        if (errors.length > 0) {
+            const maxErrors = 10;
+            const errorMessage = errors.slice(0, maxErrors).join('\n');
+            const moreErrors = errors.length > maxErrors ? `\n... and ${errors.length - maxErrors} more errors` : '';
+            alert(`Found errors in the CSV data:\n\n${errorMessage}${moreErrors}\n\nPlease fix the data and try again.`);
+            return;
+        }
+        
+        if (newTransactions.length === 0) {
+            alert('No valid transactions found to import.');
+            return;
+        }
+        
+        const confirmMessage = `Import ${newTransactions.length} transactions? This will add them to your existing data.`;
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        transactions.push(...newTransactions);
+        saveData();
+        renderTransactionList();
+        
+        if (currentView === "view-report") {
+            generateReport();
+        }
+        
+        closeModal(csvMappingModal);
+        
+        const currentFileName = csvFiles.length > 0 ? csvFiles[currentFileIndex].name : 'file';
+        let successMessage = `Successfully imported ${newTransactions.length} transactions`;
+        
+        if (csvFiles.length > 1) {
+            successMessage += ` from "${currentFileName}"`;
+        }
+        
+        csvData = [];
+        csvHeaders = [];
+        columnMappings = {};
+        currentFileIndex++;
+        
+        if (currentFileIndex < csvFiles.length) {
+            // More files to process
+            successMessage += `\n\nProcessing next file (${currentFileIndex + 1} of ${csvFiles.length})...`;
+            alert(successMessage);
+            setTimeout(() => processCurrentFile(), 500); // Small delay for better UX
+        } else {
+            // All files processed
+            successMessage += csvFiles.length > 1 ? `\n\nAll ${csvFiles.length} files have been processed!` : '!';
+            alert(successMessage);
+            csvFiles = [];
+            currentFileIndex = 0;
+        }
+    };
+
+    // --- Smart Categorization System ---
+    const smartCategorizeTransactions = () => {
+        const uncategorizedTransactions = transactions.filter(t => 
+            t.category === 'Other Expense' || t.category === 'Other Income'
+        );
+        
+        if (uncategorizedTransactions.length === 0) {
+            alert('No transactions to categorize! All transactions are already categorized.');
+            return;
+        }
+        
+        const categorizationPlan = [];
+        let changedCount = 0;
+        
+        uncategorizedTransactions.forEach(transaction => {
+            const newCategory = smartCategorizeTransaction(transaction.description, transaction.type);
+            if (newCategory && newCategory !== transaction.category) {
+                categorizationPlan.push({
+                    transaction: transaction,
+                    oldCategory: transaction.category,
+                    newCategory: newCategory
+                });
+                changedCount++;
+            }
+        });
+        
+        if (changedCount === 0) {
+            alert('No improvements found. All transactions are already properly categorized or cannot be auto-categorized.');
+            return;
+        }
+        
+        // Show confirmation dialog with preview
+        showCategorizationPreview(categorizationPlan);
+    };
+    
+    const smartCategorizeTransaction = (description, type) => {
+        if (!description || !type) return null;
+        
+        const descLower = description.toLowerCase().trim();
+        
+        if (type === 'expense') {
+            // TRAVEL - Hotels, flights, travel services
+            if (descLower.match(/(\bhotel\b|\binn\b|\bmotel\b|\blodge\b|\bresort\b|\bhampton\b|\bhilton\b|\bmarriott\b)/)) return 'Travel';
+            if (descLower.match(/(\bfairfield\b|\bbest western\b|\bholiday inn\b|\bhyatt\b|\bembassy\b|\bcourtyard\b)/)) return 'Travel';
+            if (descLower.match(/(\bairline\b|\bflight\b|\bairport\b|\btravel\b|\bbooking\b|\bexpedia\b)/)) return 'Travel';
+            
+            // MEDICAL - Health, pharmacy, medical services
+            if (descLower.match(/(\bcvs\b|\bpharmacy\b|\bwalgreens\b|\brite aid\b|\bmedical\b|\bhealth\b|\bdoctor\b)/)) return 'Medical';
+            if (descLower.match(/(\bcerebral\b|\btherapy\b|\bclinic\b|\bhospital\b|\bdental\b|\bvision\b|\binsurance\b)/)) return 'Medical';
+            if (descLower.match(/(\bmedicine\b|\bprescription\b|\bcare\b|\bwellness\b|\bmental health\b)/)) return 'Medical';
+            
+            // SHOPPING - Retail, online shopping, general purchases
+            if (descLower.match(/(\bamazon\b|\bebay\b|\bshopping\b|\bstore\b|\bretail\b|\bmall\b|\bonline\b)/)) return 'Shopping';
+            if (descLower.match(/(\bclothes\b|\bclothing\b|\bshoes\b|\bfashion\b|\bapparel\b|\btarget\b|\bwalmart\b)/)) return 'Shopping';
+            if (descLower.match(/(\bmktpl\b|\bmarketplace\b|\bpurchase\b|\bbuy\b|\border\b)/)) return 'Shopping';
+            
+            // SUBSCRIPTIONS - Software, apps, digital services
+            if (descLower.match(/(\bapple\.com\b|\bgoogle\b|\bmicrosoft\b|\badobe\b|\bopenai\b|\bsubscription\b)/)) return 'Subscriptions';
+            if (descLower.match(/(\bnetflix\b|\bspotify\b|\bhulu\b|\bdisney\b|\byoutube\b|\bstreaming\b)/)) return 'Subscriptions';
+            if (descLower.match(/(\bzoom\b|\bslack\b|\bgithub\b|\bdropbox\b|\bcloud\b|\bsaas\b|\bapp\b)/)) return 'Subscriptions';
+            if (descLower.match(/(\bprime\b|\bicloud\b|\boffice 365\b|\bcreative cloud\b|\bquickbooks\b)/)) return 'Subscriptions';
+            
+            // DINING OUT - Restaurants and food
+            if (descLower.match(/(\brestaurant\b|\bdining\b|\bfood\b|\bpizza\b|\bburger\b|\bchicken\b|\btaco\b)/)) return 'Dining Out';
+            if (descLower.match(/(\bwhataburger\b|\bmcdonald\b|\bdomino\b|\bsubway\b|\bkfc\b|\bwings\b|\bbbq\b)/)) return 'Dining Out';
+            if (descLower.match(/(\bjimmy\b|\braising\b|\bcanes\b|\bbuffalo\b|\bsonic\b|\bstarbucks\b|\bcoffee\b)/)) return 'Dining Out';
+            
+            // GROCERIES - Food shopping
+            if (descLower.match(/(\bheb\b|\bh-e-b\b|\bgrocery\b|\bsupermarket\b|\bmarket\b|\bcostco\b|\bkroger\b)/)) return 'Groceries';
+            
+            // TRANSPORT - Gas, automotive, transportation
+            if (descLower.match(/(\bgas\b|\bfuel\b|\bshell\b|\bchevron\b|\bexxon\b|\bmobil\b|\bstation\b)/)) return 'Transport';
+            if (descLower.match(/(\bauto\b|\bcar\b|\bautomotive\b|\bmechanic\b|\brepair\b|\bservice\b|\btire\b)/)) return 'Transport';
+            if (descLower.match(/(\buber\b|\blyft\b|\btaxi\b|\bparking\b|\btoll\b|\btransport\b)/)) return 'Transport';
+            
+            // ENTERTAINMENT - Games, movies, fun
+            if (descLower.match(/(\bsteam\b|\bsteamgames\b|\bgaming\b|\bgame\b|\bxbox\b|\bplaystation\b)/)) return 'Entertainment';
+            if (descLower.match(/(\bmovie\b|\bcinema\b|\btheater\b|\bamc\b|\bregal\b|\btickets\b)/)) return 'Entertainment';
+            
+            // UTILITIES - Phone, internet, power
+            if (descLower.match(/(\belectric\b|\bpower\b|\benergy\b|\bwater\b|\bsewer\b|\binternet\b|\bphone\b)/)) return 'Utilities';
+            if (descLower.match(/(\bcomcast\b|\bverizon\b|\bat&t\b|\bspectrum\b|\butility\b|\bwireless\b)/)) return 'Utilities';
+            
+        } else if (type === 'income') {
+            // SALARY - Employment income
+            if (descLower.match(/(\bpayroll\b|\bsalary\b|\bwages\b|\bemployer\b|\bdirect deposit\b|\bfedwire\b)/)) return 'Salary';
+            if (descLower.match(/(\bmechanical\b|\bconstruction\b|\bcorp\b|\bcompany\b|\bco\b|\binc\b|\bllc\b)/)) return 'Salary';
+            
+            // FREELANCE - Contract work
+            if (descLower.match(/(\bfreelance\b|\bconsulting\b|\bcontract\b|\bclient\b|\binvoice\b)/)) return 'Freelance';
+            
+            // OTHER INCOME - Investments, refunds, etc.
+            if (descLower.match(/(\binterest\b|\bdividend\b|\binvestment\b|\brefund\b|\bcashback\b)/)) return 'Other Income';
+        }
+        
+        return null; // Return null if no category matches, keep original category
+    };
+    
+    const showCategorizationPreview = (categorizationPlan) => {
+        let previewText = `Smart Categorization will update ${categorizationPlan.length} transactions:\n\n`;
+        
+        const categoryChanges = {};
+        categorizationPlan.forEach(item => {
+            const key = `${item.oldCategory} → ${item.newCategory}`;
+            if (!categoryChanges[key]) {
+                categoryChanges[key] = 0;
+            }
+            categoryChanges[key]++;
+        });
+        
+        Object.entries(categoryChanges).forEach(([change, count]) => {
+            previewText += `• ${count} transactions: ${change}\n`;
+        });
+        
+        previewText += `\nDo you want to proceed with these changes?`;
+        
+        if (confirm(previewText)) {
+            applyCategorization(categorizationPlan);
+        }
+    };
+    
+    const applyCategorization = (categorizationPlan) => {
+        let successCount = 0;
+        
+        categorizationPlan.forEach(item => {
+            const transaction = transactions.find(t => t.id === item.transaction.id);
+            if (transaction) {
+                transaction.category = item.newCategory;
+                successCount++;
+            }
+        });
+        
+        saveData();
+        renderTransactionList();
+        
+        if (currentView === "view-report") {
+            generateReport();
+        }
+        
+        alert(`Successfully categorized ${successCount} transactions!`);
+    };
+
     // --- Event Listeners ---
     // View Switching
-    navButtons.forEach((button) =>
-        button.addEventListener("click", () => showView(button.dataset.view)),
-    );
+    navButtons.forEach((button) => {
+        button.addEventListener("click", (e) => {
+            e.preventDefault();
+            showView(button.dataset.view);
+        });
+    });
+    
     bottomNavBtns.forEach((button) => {
         if (button.dataset.view)
             button.addEventListener("click", () => showView(button.dataset.view));
@@ -1234,6 +2309,22 @@ document.addEventListener("DOMContentLoaded", () => {
     categoryModal.addEventListener("click", (e) => {
         if (e.target === categoryModal) closeModal(categoryModal);
     }); // Close on backdrop click
+    csvMappingModal.addEventListener("click", (e) => {
+        if (e.target === csvMappingModal) {
+            const shouldCancel = csvFiles.length > 1 
+                ? confirm(`Cancel import process? This will skip all remaining files (${csvFiles.length - currentFileIndex} files).`)
+                : true;
+                
+            if (shouldCancel) {
+                closeModal(csvMappingModal);
+                csvData = [];
+                csvHeaders = [];
+                columnMappings = {};
+                csvFiles = [];
+                currentFileIndex = 0;
+            }
+        }
+    }); // Close on backdrop click
     transactionForm.addEventListener("submit", handleTransactionFormSubmit);
     typeSelect.addEventListener("change", populateCategoryOptions); // Update categories when type changes
 
@@ -1243,6 +2334,33 @@ document.addEventListener("DOMContentLoaded", () => {
     // Filtering
     searchInput.addEventListener("input", handleFilterChange);
     filterTypeSelect.addEventListener("change", handleFilterChange);
+
+    // Search bar scroll transparency
+    let scrollTimeout;
+    window.addEventListener("scroll", () => {
+        clearTimeout(scrollTimeout);
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        if (scrollTop > 100) {
+            searchBar.classList.add("scrolled");
+        } else {
+            searchBar.classList.remove("scrolled");
+        }
+    });
+
+    // Keyboard shortcut to focus search (/ key)
+    document.addEventListener("keydown", (e) => {
+        // Only trigger if not already focused on an input
+        if (e.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) {
+            e.preventDefault();
+            searchInput.focus();
+            searchBar.classList.remove("scrolled"); // Make visible when focused
+        }
+        // Escape to blur search
+        if (e.key === "Escape" && e.target === searchInput) {
+            searchInput.blur();
+        }
+    });
 
     // Category Management
     manageCategoriesNavBtn.addEventListener("click", showCategoryModal);
@@ -1279,6 +2397,28 @@ document.addEventListener("DOMContentLoaded", () => {
     saveDataBtn.addEventListener("click", saveDataToJSONFile);
     loadDataBtn.addEventListener("click", () => loadFileInput.click()); // Trigger hidden file input
     loadFileInput.addEventListener("change", handleLoadDataFromFile);
+
+    // Smart Categorization
+    smartCategorizeBtn.addEventListener("click", smartCategorizeTransactions);
+
+    // CSV Import
+    importCsvBtn.addEventListener("click", () => csvFileInput.click());
+    csvFileInput.addEventListener("change", handleCsvFileSelect);
+    importTransactionsBtn.addEventListener("click", importCsvTransactions);
+    cancelCsvImportBtn.addEventListener("click", () => {
+        const shouldCancel = csvFiles.length > 1 
+            ? confirm(`Cancel import process? This will skip all remaining files (${csvFiles.length - currentFileIndex} files).`)
+            : true;
+            
+        if (shouldCancel) {
+            closeModal(csvMappingModal);
+            csvData = [];
+            csvHeaders = [];
+            columnMappings = {};
+            csvFiles = [];
+            currentFileIndex = 0;
+        }
+    });
 
     // Clear All
     clearAllBtn.addEventListener("click", clearAllTransactions);
